@@ -1,0 +1,1 @@
+ggsave(figname, 'Figures/figname.png', width=6, height=4, units='in',dpi=600)
