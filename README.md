@@ -1,4 +1,6 @@
 # Spatial and temporal patterns in small Western U.S. lakes 
+
+### TEAM NAME: TBD!!!!!! 
 ### Contributors: Sean B., Jordan B., Spencer C., Ashleigh P., Linnea R., Jordan V.
 ### Mentors: Carol B. and Bella O. 
 
