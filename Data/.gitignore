@@ -4,3 +4,7 @@ limnoSat_westernUSA.csv
 
 #Ignore DS_Store!
 .DS_Store
+
+
+# ignore masterDF
+masterDF.csv

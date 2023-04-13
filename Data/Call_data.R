@@ -1,6 +1,6 @@
 
 
-masterDF <- source('Data/masterDF.RDS')
+masterDF <- read.csv('Data/masterDF.csv')
 
 
 
