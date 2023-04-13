@@ -5,7 +5,7 @@ library(broom)
 
 source("Code/fui_scripts.R")
 
-site_cols <- DF_NAME %>%
+site_cols <- limnoSat %>%
   mutate(dWL = round(dWL,0)) %>%
   inner_join(fui.lookup) %>%
   inner_join(fui.colors) %>%
