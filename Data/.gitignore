@@ -1,3 +1,6 @@
 limnoSat_westernUSA.csv
 
 *.RDS
+
+#Ignore DS_Store!
+.DS_Store
