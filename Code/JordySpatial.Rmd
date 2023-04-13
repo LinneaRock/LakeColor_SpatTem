@@ -17,5 +17,8 @@ limnosatRaw <- read_csv("Data/limnoSat_westernUSA.csv")
 limnosatMeta <- read_csv("Data/limnoSat_westernUSA_metadata.csv") %>%
   select(1:2)
 
+source("LAGOSUS_locus.R")
+source("LAGOSUS_geo.R")
+
 ```
 
