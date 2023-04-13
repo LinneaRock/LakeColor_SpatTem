@@ -37,3 +37,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+#Ignore big data files
+*/Data/limnoSat_westernUSA.csv
