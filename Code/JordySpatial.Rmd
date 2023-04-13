@@ -6,19 +6,363 @@ output: html_document
 ---
 
 
+```{bash}
+rsync -a /Users/jordanscheibe/Desktop/Data2 jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/
+
+/Users/jordanscheibe/Desktop/Data2
+
+salloc --mem=120GB --nodes=1 --account=microbiome --time=3:00:00
+module load arcc/1.0  gcc/12.2.0
+module load r/4.2.2
+R
+
+
+
+```
 
 
 ```{r}
-library(tidyverse)
-library(ggthemes)
+require(tidyverse)
+limnoSat <- read.csv('Data/limnoSat_westernUSA.csv')
+limnoSatMetadata <- read.csv('Data/limnoSat_westernUSA_metadata.csv')
 
-limnosatRaw <- read_csv("Data/limnoSat_westernUSA.csv")
+climate_data <- readRDS('Data/climate_data.rds') #rename zone id to match whatever in this
+landcover_data <- readRDS('Data/landcover_data.RDS')
 
-limnosatMeta <- read_csv("Data/limnoSat_westernUSA_metadata.csv") %>%
-  select(1:2)
+elev_data <- readRDS('Data/elev_data.RDS')
+hydro_data <- readRDS('Data/hydro_data.RDS')
+watershed_data <- readRDS('Data/watershed_data.RDS')
 
-source("LAGOSUS_locus.R")
-source("LAGOSUS_geo.R")
+source('Data/LAGOSUS_zoneIDs.R')
+
+rm(infile1)
+rm(inUrl1)
+
+
+
+hydro2 <- hydro_data |>
+  select(lagoslakeid, lake_waterarea_ha, lake_perimeter_m, lake_islandperimeter_m, lake_connectivity_class, lake_connectivity_permanent) |>
+  mutate(lake_totalperimeter_m = lake_islandperimeter_m + lake_perimeter_m)
+
+elev2 <- elev_data |>
+  select(lagoslakeid, lake_elevation_m, lake_county)
+
+limnoSat2 <- limnoSat |>
+  select(-nhdplusv2_comid)
+
+watershed2 <- watershed_data |>
+  select(lagoslakeid, ws_area_ha, ws_lake_arearatio)
+
+zoneid2 <- zoneIDs |>
+  select(lagoslakeid, hu12_zoneid)
+
+
+bigdata <- left_join(limnoSat, hydro2) |>
+  left_join(elev2) |>
+  left_join(watershed2) |>
+  left_join(zoneid2)
+
+bigdata2 <- bigdata |>
+  filter(lake_waterarea_ha < 10)
+
+
+# length(unique(bigdata2$lagoslakeid))
+# 
+# 
+# climate2 <- climate_data |>
+#   rename(hu12_zoneid = zoneid) |>
+#   select(-spatial_division)
+# 
+# 
+# bigdata3 <- left_join(bigdata2, climate2)
+
+
+saveRDS(bigdata2, 'Data/masterDF.RDS')
+
+
+```
+
+
+```{r}
+rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/Data/masterDF.RDS /Users/jordanscheibe/Desktop/
+  
+
+rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/masterDF.csv /Users/jordanscheibe/Desktop/
+```
+
+
+```{r}
+mast<-readRDS("/Users/jordanscheibe/Desktop/masterDF.RDS")
+
+```
+
+
+
+Filter by state
+```{r}
+WY<-mast[mast$lake_centroidstate=="WY",]
+WY_2021<-WY[WY$year==2021,]
+WY_2019<-WY[WY$year==2019,]
+WY_1991<-WY[WY$year==1991,]
+
+length(unique(WY_2021$lagoslakeid))
+unique(mast$year)
+
+require(geosphere)
+require(reshape2)
+
+
+xy <- data.frame(X =WY_2021$lake_lon_decdeg, Y = WY_2021$lake_lat_decdeg, lakeID=WY_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-WY_2021[,names(WY_2021) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
+
+```
+
+
+
+
+```{r}
+CA<-mast[mast$lake_centroidstate=="CA",]
+CA_2021<-CA[CA$year==2021,]
+CA_2019<-CA[CA$year==2019,]
+CA_1991<-CA[CA$year==1991,]
+
+length(unique(CA_2021$lagoslakeid))
+unique(mast$year)
+
+xy <- data.frame(X =CA_2021$lake_lon_decdeg, Y = CA_2021$lake_lat_decdeg, lakeID=CA_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-CA_2021[,names(CA_2021) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
+```
+
+```{r}
+WYNV<-mast[mast$lake_centroidstate%in%c("WY","NV"),]
+WYNV_2021<-WYNV[WYNV$year==2021,]
+
+length(unique(WYNV_2021$lagoslakeid))
+unique(mast$year)
+
+xy <- data.frame(X =WYNV_2021$lake_lon_decdeg, Y = WYNV_2021$lake_lat_decdeg, lakeID=WYNV_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-WYNV_2021[,names(WYNV_2021) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
+```
+
+
+
+
+```{r}
+require(geopshere)
+
+#can reaload data from here, or just use the qp2 object
+qpn<-qp2$result[,c("sample1","sample2","RC")]
+names(qpn)[1]<-"s1_samp_names"
+names(qpn)[2]<-"s2_samp_names"
+
+
+dfr <- reshape(qpn, direction="wide", idvar="s1_samp_names", timevar="s2_samp_names")
+rownames(dfr)<-dfr$s1_samp_names
+dfr$s1_samp_names<-NULL
+colnames(dfr)<-str_split_fixed(colnames(dfr),"RC[.]",n=2)[,2]
+dfr$SV0426L<-rep(NA,nrow(dfr))
+dfr[nrow(dfr)+1,] <- NA
+rownames(dfr)[478]<-"33_1_10_DNA"
+
+dfr<-dfr[order(row.names(dfr)), ]
+table(rownames(dfr)==colnames(dfr)) #all true
+table(rownames(dfr)%in%metadata$samp_names) #all true
+table(colnames(dfr)%in%metadata$samp_names) # all true
+
+RCbray<-as.dist(dfr)
+
+#now add in environmental distances (lake bottom water and lake depth)
+#using objects from above
+variables<-c("max_lake_depth"         
+, "water_sample_ph_bot"     
+, "water_sample_do_bot"     
+, "water_sample_t_bot") 
+
+#pull out metadata
+metadata<-metadata[order(match(rownames(metadata),colnames(dfr))),]
+metadata_sub<-metadata[,names(metadata)%in%variables]
+
+
+table(colnames(dfr)==metadata$samp_names) # all true
+table(colnames(dfr)==rownames(metadata_sub)) # all true 
+
+env_dist <- as.dist(as.matrix(daisy(scale(metadata_sub), metric="gower")))
+table(labels(RCbray)==labels(env_dist))
+
+
+# geographic distance
+
+#Lat&lon to distance in meters
+xy <- data.frame(X = metadata$longitude, Y = metadata$latitude)
+rownames(xy)<-metadata$samp_names
+dist_m_output<-distm(xy)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+geo_dist<-as.dist(dist_m_output)
+
+#check to make sure all labels match!
+table(labels(RCbray)==labels(env_dist)) #all true
+table(labels(RCbray)==labels(geo_dist)) #all true
+
 
 ```
 
