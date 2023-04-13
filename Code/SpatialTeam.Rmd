@@ -1,0 +1,21 @@
+---
+title: "LakeColor_Spatial"
+author: "Jordan Von Eggers"
+date: "2023-04-13"
+output: html_document
+---
+
+
+
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+
+limnosatRaw <- read_csv("Data/limnoSat_westernUSA.csv")
+
+limnosatMeta <- read_csv("Data/limnoSat_westernUSA_metadata.csv") %>%
+  select(1:2)
+
+```
+
