@@ -56,12 +56,14 @@ bg.fui = tibble(
 ggplot() + 
   geom_rect(data = bg.fui, 
             aes(xmin = ymin, xmax = ymax, ymin = -5, ymax = 100, fill = color)) + 
+  scale_fill_identity() 
+
   geom_vline(xintercept = 530, linetype = 3) +
   geom_histogram(data = limnosatRaw, aes(x=dWL, y = after_stat(density)), fill = NA,
                  color = 'black', alpha = .3, bins = 40) + 
   geom_density(data = limnosatRaw, aes(x=dWL)) + 
   scale_x_continuous(expand = c(0, 0))+ #get rid of whitespace
-  scale_fill_identity() + 
+
   theme_few() +
   coord_cartesian(ylim = c(0,.04))  +
   labs(x="Dominant wavelength (nm)",
