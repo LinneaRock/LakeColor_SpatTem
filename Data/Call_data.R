@@ -9,3 +9,6 @@ landcover_data <- readRDS('Data/landcover_data.RDS')
 elev_data <- readRDS('Data/elev_data.RDS')
 hydro_data <- readRDS('Data/hydro_data.RDS')
 watershed_data <- readRDS('Data/watershed_data.RDS')
+
+
+zone_ids <- source('Data/LAGOSUS_zoneIDs.R')
