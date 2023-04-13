@@ -2,6 +2,8 @@
 library(tidyverse)
 library(purrr)
 library(broom)
+library(trend)
+library(zyp)
 
 source("Code/fui_scripts.R")
 
