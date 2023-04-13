@@ -1,27 +1,27 @@
 #Connect dWL to the forel ule index for visualization
 #The Forel-Ule Index (FUI) is a useful comprehensive indicator to show the water colour variability and water quality change in both inland waters and oceans.
-fui.lookup <- tibble(dWL = c(471:583), fui = NA)
-fui.lookup$fui[fui.lookup$dWL <= 583] = 21
-fui.lookup$fui[fui.lookup$dWL <= 581] = 20
-fui.lookup$fui[fui.lookup$dWL <= 579] = 19
-fui.lookup$fui[fui.lookup$dWL <= 577] = 18
-fui.lookup$fui[fui.lookup$dWL <= 575] = 17
-fui.lookup$fui[fui.lookup$dWL <= 573] = 16
-fui.lookup$fui[fui.lookup$dWL <= 571] = 15
-fui.lookup$fui[fui.lookup$dWL <= 570] = 14
-fui.lookup$fui[fui.lookup$dWL <= 569] = 13
-fui.lookup$fui[fui.lookup$dWL <= 568] = 12
-fui.lookup$fui[fui.lookup$dWL <= 567] = 11
-fui.lookup$fui[fui.lookup$dWL <= 564] = 10
-fui.lookup$fui[fui.lookup$dWL <= 559] = 9
-fui.lookup$fui[fui.lookup$dWL <= 549] = 8
-fui.lookup$fui[fui.lookup$dWL <= 530] = 7
-fui.lookup$fui[fui.lookup$dWL <= 509] = 6
-fui.lookup$fui[fui.lookup$dWL <= 495] = 5
-fui.lookup$fui[fui.lookup$dWL <= 489] = 4
-fui.lookup$fui[fui.lookup$dWL <= 485] = 3
-fui.lookup$fui[fui.lookup$dWL <= 480] = 2
-fui.lookup$fui[fui.lookup$dWL <= 475 & fui.lookup$dWL >470] = 1
+fui.lookup <- tibble(ann_dWL = c(471:583), fui = NA)
+fui.lookup$fui[fui.lookup$ann_dWL <= 583] = 21
+fui.lookup$fui[fui.lookup$ann_dWL <= 581] = 20
+fui.lookup$fui[fui.lookup$ann_dWL <= 579] = 19
+fui.lookup$fui[fui.lookup$ann_dWL <= 577] = 18
+fui.lookup$fui[fui.lookup$ann_dWL <= 575] = 17
+fui.lookup$fui[fui.lookup$ann_dWL <= 573] = 16
+fui.lookup$fui[fui.lookup$ann_dWL <= 571] = 15
+fui.lookup$fui[fui.lookup$ann_dWL <= 570] = 14
+fui.lookup$fui[fui.lookup$ann_dWL <= 569] = 13
+fui.lookup$fui[fui.lookup$ann_dWL <= 568] = 12
+fui.lookup$fui[fui.lookup$ann_dWL <= 567] = 11
+fui.lookup$fui[fui.lookup$ann_dWL <= 564] = 10
+fui.lookup$fui[fui.lookup$ann_dWL <= 559] = 9
+fui.lookup$fui[fui.lookup$ann_dWL <= 549] = 8
+fui.lookup$fui[fui.lookup$ann_dWL <= 530] = 7
+fui.lookup$fui[fui.lookup$ann_dWL <= 509] = 6
+fui.lookup$fui[fui.lookup$ann_dWL <= 495] = 5
+fui.lookup$fui[fui.lookup$ann_dWL <= 489] = 4
+fui.lookup$fui[fui.lookup$ann_dWL <= 485] = 3
+fui.lookup$fui[fui.lookup$ann_dWL <= 480] = 2
+fui.lookup$fui[fui.lookup$ann_dWL <= 475 & fui.lookup$dWL >470] = 1
 
 
 # Actual Forel-Ule Colors
