@@ -559,31 +559,32 @@ if (is.na(file.size(infile6))) download.file(inUrl6,infile6,method="auto")
 
 
 dt6 <-read.csv(infile6,header=F 
-               ,sep=","  
-               ,quot='"' 
-               , col.names=c(
-                 "zoneid",     
-                 "spatial_division",     
-                 "climate_year",     
-                 "climate_month",     
-                 "datacoveragepct",     
-                 "climate_tmean_degc",     
-                 "climate_tmin_degc",     
-                 "climate_tmax_degc",     
-                 "climate_ppt_mm"    ), check.names=TRUE)
+                                ,skip=1
+                                ,sep=","  
+                                ,quot='"' 
+                                , col.names=c(
+                                  "zoneid",     
+                                  "climate_year",     
+                                  "climate_month",     
+                                  "datacoveragepct",     
+                                  "spatial_division",     
+                                  "climate_tmean_degc",     
+                                  "climate_tmin_degc",     
+                                  "climate_tmax_degc",     
+                                  "climate_ppt_mm"    ), check.names=TRUE)
 
 unlink(infile6)
 
 # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
 
 if (class(dt6$zoneid)!="factor") dt6$zoneid<- as.factor(dt6$zoneid)
-if (class(dt6$spatial_division)!="factor") dt6$spatial_division<- as.factor(dt6$spatial_division)
 if (class(dt6$climate_year)=="factor") dt6$climate_year <-as.numeric(levels(dt6$climate_year))[as.integer(dt6$climate_year) ]               
 if (class(dt6$climate_year)=="character") dt6$climate_year <-as.numeric(dt6$climate_year)
 if (class(dt6$climate_month)=="factor") dt6$climate_month <-as.numeric(levels(dt6$climate_month))[as.integer(dt6$climate_month) ]               
 if (class(dt6$climate_month)=="character") dt6$climate_month <-as.numeric(dt6$climate_month)
 if (class(dt6$datacoveragepct)=="factor") dt6$datacoveragepct <-as.numeric(levels(dt6$datacoveragepct))[as.integer(dt6$datacoveragepct) ]               
 if (class(dt6$datacoveragepct)=="character") dt6$datacoveragepct <-as.numeric(dt6$datacoveragepct)
+if (class(dt6$spatial_division)!="factor") dt6$spatial_division<- as.factor(dt6$spatial_division)
 if (class(dt6$climate_tmean_degc)=="factor") dt6$climate_tmean_degc <-as.numeric(levels(dt6$climate_tmean_degc))[as.integer(dt6$climate_tmean_degc) ]               
 if (class(dt6$climate_tmean_degc)=="character") dt6$climate_tmean_degc <-as.numeric(dt6$climate_tmean_degc)
 if (class(dt6$climate_tmin_degc)=="factor") dt6$climate_tmin_degc <-as.numeric(levels(dt6$climate_tmin_degc))[as.integer(dt6$climate_tmin_degc) ]               
@@ -611,10 +612,10 @@ attach(dt6)
 # The analyses below are basic descriptions of the variables. After testing, they should be replaced.                 
 
 summary(zoneid)
-summary(spatial_division)
 summary(climate_year)
 summary(climate_month)
 summary(datacoveragepct)
+summary(spatial_division)
 summary(climate_tmean_degc)
 summary(climate_tmin_degc)
 summary(climate_tmax_degc)
@@ -623,7 +624,7 @@ summary(climate_ppt_mm)
 
 summary(as.factor(dt6$zoneid)) 
 summary(as.factor(dt6$spatial_division))
-detach(dt6)               
+detach(dt6)                 
 
 
 
