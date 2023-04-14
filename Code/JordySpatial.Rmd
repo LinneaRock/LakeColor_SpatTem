@@ -3,7 +3,25 @@ title: "LakeColor_Spatial"
 author: "Jordan Von Eggers"
 date: "2023-04-13"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
+
+
+#for Jordan
+
+```{r}
+
+mast<-read.csv("masterDF.csv")
+intermountain<-mast[mast$lake_centroidstate%in%c("ID","MT", "WY", "CO"),]
+intermountain<-intermountain[intermountain$year==2021,]
+
+HUC_zoneid<-intermountain$hu12_zoneid
+```
+
+
+
+
 
 
 ```{bash}
@@ -83,22 +101,192 @@ saveRDS(bigdata2, 'Data/masterDF.RDS')
 ```
 
 
-```{r}
+```{bash}
 rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/Data/masterDF.RDS /Users/jordanscheibe/Desktop/
   
 
 rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/masterDF.csv /Users/jordanscheibe/Desktop/
 ```
 
-
+#read in data
 ```{r}
 mast<-readRDS("/Users/jordanscheibe/Desktop/masterDF.RDS")
+```
+
+
+#Looking at intermountain west
+
+```{r}
+require(tidyverse)
+require(geosphere)
+intermountain<-mast[mast$lake_centroidstate%in%c("ID","MT", "WY", "CO"),]
+intermountain<-intermountain[intermountain$year==2021,]
+
+xy <- data.frame(X =intermountain$lake_lon_decdeg, Y = intermountain$lake_lat_decdeg, lakeID=intermountain$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-intermountain[,names(intermountain) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+pairwise_far<-pairwise[pairwise$dist_km>1000,]
+plot(pairwise_far$dist_km, pairwise_far$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise_far$diff_dWL~pairwise_far$dist_km), col="red")
+summary(lm(pairwise_far$diff_dWL~pairwise_far$dist_km))
+
+
+
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
 
 ```
 
 
+#Looping for comparisons of all Western States
 
-Filter by state
+```{r}
+mat<-matrix(1:121,byrow=T,nrow=11,ncol=11)
+colnames(mat)<-unique(mast$lake_centroidstate)
+rownames(mat)<-unique(mast$lake_centroidstate)
+mat[upper.tri(mat, diag = T)] <- NA
+mat<-as.data.frame(mat)
+
+allstatecomps<-data.frame(t(combn(names(mat),2)), dist=t(mat)[upper.tri(mat)])
+
+allstatecomps$dist<-NULL
+rm(mat)
+
+st_comps<-list()
+for(i in 1:nrow(allstatecomps)){
+  st_comps[[i]]<-c(allstatecomps$X1[i],allstatecomps$X2[i])
+}
+```
+
+
+
+#
+
+
+
+
+
+
+```{r}
+i=1
+y=1
+year<-c(1991,2021)
+for(i in 1:55){
+df1<-mast[mast$lake_centroidstate%in%c(st_comps[[i]]),]
+
+for(y in 1:2){
+df2<-df1[df1$year==year[y],]
+
+xy <- data.frame(X =df2$lake_lon_decdeg, Y = df2$lake_lat_decdeg, lakeID=df2$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-df2[,names(df2) %in% c("lagoslakeid","dWL")]
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+pairwise_far<-pairwise[pairwise$dist_km>1000,]
+plot(pairwise_far$dist_km, pairwise_far$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise_far$diff_dWL~pairwise_far$dist_km), col="red")
+summary(lm(pairwise_far$diff_dWL~pairwise_far$dist_km))
+  
+}
+}
+```
+
+
+
+
+
+
+
+#Not as clean
+## filter by WY
 ```{r}
 WY<-mast[mast$lake_centroidstate=="WY",]
 WY_2021<-WY[WY$year==2021,]
@@ -173,7 +361,7 @@ abline(lm(green$diff_dWL~green$dist_km), col="red")
 
 
 
-
+# filter by CA
 ```{r}
 CA<-mast[mast$lake_centroidstate=="CA",]
 CA_2021<-CA[CA$year==2021,]
@@ -304,7 +492,7 @@ abline(lm(green$diff_dWL~green$dist_km), col="red")
 ```
 
 
-
+#filter by WY NV, in past
 ```{r}
 WYNV<-mast[mast$lake_centroidstate%in%c("WY","NV"),]
 WYNV_2021<-WYNV[WYNV$year==1991,]
@@ -512,4 +700,7 @@ green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
 plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
 abline(lm(green$diff_dWL~green$dist_km), col="red")
 ```
+
+
+
 
