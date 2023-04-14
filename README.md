@@ -1,5 +1,7 @@
 # Spatial and temporal patterns in small Western U.S. lakes
 
+![](Figures/team001.jpg)
+
 ### Contributors: Sean B., Jordan B., Spencer C., Ashleigh P., Linnea R., Jordan V.
 
 ### Mentors: Carol B. and Bella O.
@@ -17,5 +19,5 @@ We are using LandSat and LAGOS data to investigate spatial and temporal patterns
 
 Hard at work on April 13, 2023
 
-![](Figures/team001.jpg)
+
 ![](Figures/team002.jpg)
