@@ -12,6 +12,7 @@ library(purrr)
 library(broom)
 library(trend)
 library(zyp)
+library(patchwork)
 
 # Read in masterDF
 ### Ashleigh, UNCOMMENT THIS IF STARTING ANEW 
@@ -100,7 +101,7 @@ trends_summary = unnest(trends_nested, c(sens_sum, slope, early_mean)) %>%
       p.value <= 0.05 & slope >= 0 & early_mean < 530 ~ 'Blue -> Greener',
       p.value <= 0.05 & slope >= 0 & early_mean >= 530 ~ 'Intensifying Green/brown',
       p.value <= 0.05 & slope <= 0 & early_mean > 530 ~ 'Green -> Bluer',
-      p.value <= 0.05 & slope <= 0 & early_mean < 530 ~ 'Intensifying Blue',
+      p.value <= 0.05 & slope <= 0 & early_mean <= 530 ~ 'Intensifying Blue',
       p.value > 0.05 ~ 'No trend'
     ),
     Trend = factor(
@@ -125,6 +126,8 @@ trends_summary = unnest(trends_nested, c(sens_sum, slope, early_mean)) %>%
 dWL_all <- trends_summary %>% 
   unnest(data) %>% 
   unnest(intercept) 
+
+saveRDS(dWL_all, 'Data/dwl_all.RDS')
 
 # Recrreate Oleksy et al (2022) Figure 3
 
@@ -216,5 +219,12 @@ ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   ylab('Lake count') + 
   plot_layout(widths = c(1, 0.6))
 
-#dev.off()
+dev.off()
 
+
+
+## Investigate why there are NAs in the dataframe
+investNA <- dWL_all %>% 
+  filter(is.na(Trend))
+
+unique(investNA$lagoslakeid)
