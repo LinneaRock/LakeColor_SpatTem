@@ -232,7 +232,7 @@ min_ecoSig_slope_year  = min_ecoSig_slope_studyPeriod / len_study_period
 dWL_all_studyPeriod <- dWL_all %>% 
   select(lagoslakeid, group, Trend, slope) %>% 
   distinct(slope, Trend, group) %>% 
-  mutate(study_period_slope = slope*len_study_period) %>% 
+  mutate(study_period_slope = abs(slope*len_study_period)) %>% 
   mutate(ecologically_sig = case_when(study_period_slope >= 5 ~ "yes", .default = "no"))
 
 # Create df for table to summarize number of lakes by category that are stat sig vs ecologically significant 
@@ -257,6 +257,9 @@ sig_comparison_table_df$No = paste0(round(sig_comparison_table_df$perc_no, 2), "
 sig_comparison_table_df$Yes = paste0(round(sig_comparison_table_df$perc_yes, 2), "% (", sig_comparison_table_df$n_yes, ")")
 sig_comparison_table_df <- sig_comparison_table_df %>% 
   select(Trend, No, Yes)
+
+sig_comparison_table_df <- sig_comparison_table_df %>% 
+  filter(Trend != 'No trend')
 
 # Make table
 eco_sig_table <- gt(sig_comparison_table_df) %>% 
