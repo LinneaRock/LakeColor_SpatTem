@@ -15,7 +15,7 @@ library(zyp)
 
 # Read in masterDF
 ### Ashleigh, UNCOMMENT THIS IF STARTING ANEW 
-#source("Data/Call_data.R")
+source("Data/Call_data.R")
 
 # Restrict the data to Julian day 152- 258 (June 1 - Sep 15)
 source("Code/temporal_restriction.R")
@@ -176,6 +176,8 @@ png(filename = 'Figures/Figure3.Trend Examples_updated.png',
     height = 8,
     res = 600,
     units = 'in')
+
+
 ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   geom_abline(aes(intercept = intercept, slope = slope), color="grey50", size=0.1, alpha=0.5) + #background Sen's slopes
   geom_abline(data = full_spec, 
@@ -195,7 +197,7 @@ ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   theme(legend.position="none",
         plot.margin = unit(c(0,0.2,0,0), "cm"),)+
   labs(y="Dominant wavelength (nm)",
-       x="Year") +
+       x="Year") 
   
   ggplot(dWL_all %>%
            distinct(lagoslakeid,.keep_all = T),aes(x=slope,color=Trend)) + 
@@ -213,5 +215,6 @@ ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   xlab("Slope")+
   ylab('Lake count') + 
   plot_layout(widths = c(1, 0.6))
-dev.off()
+
+#dev.off()
 
