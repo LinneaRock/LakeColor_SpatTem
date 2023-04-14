@@ -161,18 +161,6 @@ trendColors <- c(
   'Blue -> Greener' = '#b2df8a'
 )
 
-trendColors_a <- c(
-  'No trend' = 'grey90',
-  'Negative' = '#a6cee3',
-  'Positive' = '#b2df8a'
-)
-
-trendColors_b <- c(
-  'No trend' = 'grey90',
-  'Blueing' = '#a6cee3',
-  'Greening' = '#b2df8a'
-)
-
 #Export
 png(filename = 'Figures/Figure3.Trend Examples_updated.png',
     width = 5,
