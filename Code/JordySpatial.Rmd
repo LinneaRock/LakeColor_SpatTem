@@ -9,11 +9,10 @@ editor_options:
 
 
 #for Jordan
-
+No longer needed because landcover did not work
 ```{r}
 
 require(stringr)
-
 require(tidyverse)
 landcover_data <- readRDS('landcover_data.RDS')
 mast<-readRDS("masterDF.RDS")
@@ -51,7 +50,7 @@ rsync -a /Users/jordanscheibe/Desktop/Data2 jvonegge@beartooth.arcc.uwyo.edu:/pr
 
 /Users/jordanscheibe/Desktop/Data2
 
-salloc --mem=120GB --nodes=1 --account=microbiome --time=3:00:00
+salloc --mem=50GB --nodes=1 --account=microbiome --time=1:00:00
 module load arcc/1.0  gcc/12.2.0
 module load r/4.2.2
 R
@@ -204,6 +203,7 @@ pairwise[pairwise$diff_dWL>50,]$color_simm<-"high"
 head(pairwise)
 ```
 
+looking for differences in land cover
 ```{r}
 head(pairwise)
 
@@ -223,7 +223,6 @@ df<-as.data.frame(same=sameconnpercent)
 #elevation
 Testing if there are differences in elevation and color
 ```{r}
-
 sub1<-intermountain[,names(intermountain) %in% c("lagoslakeid","lake_elevation_m")]
 sub1<-unique(sub1)
 
@@ -243,11 +242,24 @@ pairwise<-inner_join(sub2,pairwise)
 pairwise<-inner_join(sub3,pairwise)
 pairwise$diff_elev<-abs(pairwise$elev_1-pairwise$elev_2)
 
+write.csv(pairwise, "pairwise_comparisons_limnosat_lagos.csv")
+```
+
+#plot in supercomp
+Put in supercomputer to plot
+```{r}
+
+rsync /Users/jordanscheibe/Desktop/pairwise_comparisons_limnosat_lagos.csv jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/Data/
+
+pairwise<-read.csv("pairwise_comparisons_limnosat_lagos.csv",header=T)
+  
+png("DiffElev_DiffCol_14Apr2023.png", width=6, height=6, units="in", res=500)
 plot(pairwise$diff_elev,pairwise$diff_dWL, pch=16, col="#00000050", ylab="Difference in color (dWL)", xlab="Difference in elevation (m)")
+abline(lm(pairwise$diff_dWL~pairwise$diff_elev), col="green")
+dev.off()
+summary(lm(pairwise$diff_dWL~pairwise$diff_elev))
 
-abline(lm(pairwise_far$diff_dWL~pairwise$diff_elev), col="red")
-summary(lm(pairwise_far$diff_dWL~pairwise$diff_elev))
-
+rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/Data/DiffElev_DiffCol_14Apr2023.png /Users/jordanscheibe/Desktop/ 
 
 ```
 
@@ -287,7 +299,7 @@ pairwise_lc<-merge(pairwise, HUC_zoneid, by="hu12_zoneid")
 ```
 
 
-same watershed
+same watershed - saw no differences
 ```{r}
 same<-pairwise[pairwise$sameconnclass=="y",]
 
