@@ -12,14 +12,36 @@ editor_options:
 
 ```{r}
 
-mast<-read.csv("masterDF.csv")
+require(stringr)
+
+require(tidyverse)
+landcover_data <- readRDS('landcover_data.RDS')
+mast<-readRDS("masterDF.RDS")
 intermountain<-mast[mast$lake_centroidstate%in%c("ID","MT", "WY", "CO"),]
 intermountain<-intermountain[intermountain$year==2021,]
 
 HUC_zoneid<-intermountain$hu12_zoneid
+
+tmp<-as.data.frame(HUC_zoneid)
+tmp<-str_split_fixed(tmp[,1],"_",n=2)[,2]
+
+landcover_data<-landcover_data[landcover_data$zoneid %in% HUC_zoneid,]
+
+landcover_data<-landcover_data[landcover_data$spatial_division=="hu12",]
+
+sub<-landcover_data[,6:21]
+
+landcover_data<-sub %>%
+  mutate(dom_landcover = names(.)[max.col(.)])
+
+write.csv(landcover_data, "landcover_subset.csv")
 ```
 
 
+
+```{bash}
+rsync jvonegge@beartooth.arcc.uwyo.edu:/project/seddna/jvonegge/LakeColorData/Data/landcover_subset.csv /Users/jordanscheibe/Desktop/
+```
 
 
 
@@ -144,23 +166,134 @@ dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper
 dist_m$dist_km<-dist_m$dist/1000
 
 names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+
+
+
+
 pairwise<-dist_m
 
 sub1<-intermountain[,names(intermountain) %in% c("lagoslakeid","dWL")]
 length(unique(sub1$lagoslakeid))
 
+conn_type<-intermountain[,names(intermountain) %in% c("lagoslakeid","lake_connectivity_class")]
+conn_type<-unique(conn_type)
+
 sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub2<-merge(sub2,conn_type, by= "lagoslakeid")
 sub3<-sub2
 
-names(sub2)<-c("lake1","dWL_1")
+names(sub2)<-c("lake1","dWL_1","landcover1")
 sub2$lake1<-paste("A",sub2$lake1, sep="_")
-names(sub3)<-c("lake2","dWL_2")
+names(sub3)<-c("lake2","dWL_2","landcover2")
 sub3$lake2<-paste("A",sub3$lake2, sep="_")
 
 pairwise<-inner_join(sub2,pairwise)
 pairwise<-inner_join(sub3,pairwise)
 
 pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+pairwise$sameconnclass<-rep(NA, nrow(pairwise))
+pairwise[pairwise$landcover1==pairwise$landcover2,]$sameconnclass<-"1"
+pairwise[pairwise$landcover1!=pairwise$landcover2,]$sameconnclass<-"0"
+
+
+pairwise$color_simm<-rep(NA, nrow(pairwise))
+pairwise[pairwise$diff_dWL<=10,]$color_simm<-"low"
+pairwise[pairwise$diff_dWL>10 & pairwise$diff_dWL<=30,]$color_simm<-"med_low"
+pairwise[pairwise$diff_dWL>30 & pairwise$diff_dWL<=50,]$color_simm<-"med_high"
+pairwise[pairwise$diff_dWL>50,]$color_simm<-"high"
+head(pairwise)
+```
+
+```{r}
+head(pairwise)
+
+levels<-c("low","med_low","med_high","high")
+i=1
+sameconnpercent<-NULL
+for(i in 1:4){
+
+tmp<-pairwise[pairwise$color_simm==levels[i],]
+
+sameconnpercent<-c(sameconnpercent,(nrow(tmp[tmp$landcover2==tmp$landcover1,])/nrow(tmp)))
+}
+df<-as.data.frame(same=sameconnpercent)
+
+```
+
+#elevation
+Testing if there are differences in elevation and color
+```{r}
+
+sub1<-intermountain[,names(intermountain) %in% c("lagoslakeid","lake_elevation_m")]
+sub1<-unique(sub1)
+
+
+sub2<-sub1
+sub3<-sub1
+names(sub2)<-c("lake1","elev_1")
+names(sub3)<-c("lake2","elev_2")
+
+pairwise$lake2<-str_split_fixed(pairwise$lake2,"_",n=2)[,2]
+pairwise$lake1<-str_split_fixed(pairwise$lake1,"_",n=2)[,2]
+
+sub2$lake1<-as.character(sub2$lake1)
+sub3$lake2<-as.character(sub3$lake2)
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+pairwise$diff_elev<-abs(pairwise$elev_1-pairwise$elev_2)
+
+plot(pairwise$diff_elev,pairwise$diff_dWL, pch=16, col="#00000050", ylab="Difference in color (dWL)", xlab="Difference in elevation (m)")
+
+abline(lm(pairwise_far$diff_dWL~pairwise$diff_elev), col="red")
+summary(lm(pairwise_far$diff_dWL~pairwise$diff_elev))
+
+
+```
+
+
+
+
+add in landcover - this did not work
+```{r}
+
+landcov<-read.csv("/Users/jordanscheibe/Desktop/landcover_subset.csv")
+names(landcov)[1]<-"hu12_zoneid"
+landcov<-landcov[,names(landcov)%in% c("hu12_zoneid","dom_landcover")]
+landcov$hu12_zoneid<-paste("hu12",landcov$hu12_zoneid, sep="_")
+
+
+#add in hu12 ID into the pairwise df
+
+pairwise$lake2<-str_split_fixed(pairwise$lake2,"_",n=2)[,2]
+pairwise$lake1<-str_split_fixed(pairwise$lake1,"_",n=2)[,2]
+head(pairwise)
+
+intermountain<-mast[mast$lake_centroidstate%in%c("ID","MT", "WY", "CO"),]
+intermountain<-intermountain[intermountain$year==2021,]
+
+HUC_zoneid<-intermountain[,colnames(intermountain)%in%c("hu12_zoneid","lagoslakeid")]
+HUC_zoneid<-unique(HUC_zoneid)
+
+table(HUC_zoneid$hu12_zoneid%in%landcov$hu12_zoneid)
+table(landcov$hu12_zoneid %in%HUC_zoneid$hu12_zoneid)
+HUC_zoneid$hu12_zoneid<-as.character(HUC_zoneid$hu12_zoneid)
+domhuclago<-merge(HUC_zoneid,landcov, by="hu12_zoneid")
+
+
+
+pairwise_lc<-merge(pairwise, HUC_zoneid, by="hu12_zoneid")
+
+```
+
+
+same watershed
+```{r}
+same<-pairwise[pairwise$sameconnclass=="y",]
+
+pairwise[pairwise$landcover1==pairwise$landcover2,]$sameconnclass<-"low"
+pairwise[pairwise$landcover1!=pairwise$landcover2,]$sameconnclass<-"n"
+
 
 
 plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
@@ -178,8 +311,7 @@ summary(lm(pairwise_far$diff_dWL~pairwise_far$dist_km))
 blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
 
 plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
-abline(lm(blue$diff_dWL~blue$dist_km), col="red")
-
+≈
 
 green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
 
