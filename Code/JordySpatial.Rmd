@@ -245,6 +245,9 @@ pairwise$diff_elev<-abs(pairwise$elev_1-pairwise$elev_2)
 write.csv(pairwise, "pairwise_comparisons_limnosat_lagos.csv")
 ```
 
+The "pairwise_comparisons_limnosat_lagos.csv" file is in the Google drive folder under LakeColorData
+
+
 #plot in supercomp
 Put in supercomputer to plot
 ```{r}
