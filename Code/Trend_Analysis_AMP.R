@@ -13,6 +13,8 @@ library(broom)
 library(trend)
 library(zyp)
 library(patchwork)
+library(ggthemes)
+library(gt)
 
 # Read in masterDF
 ### Ashleigh, UNCOMMENT THIS IF STARTING ANEW 
@@ -127,18 +129,19 @@ dWL_all <- trends_summary %>%
   unnest(data) %>% 
   unnest(intercept) 
 
-saveRDS(dWL_all, 'Data/dwl_all.RDS')
+#saveRDS(dWL_all, 'Data/dwl_all.RDS')
 
 # Recrreate Oleksy et al (2022) Figure 3
 
 ### Figure 3. DWL Trend examples
 
-set.seed(123654)
+set.seed(1236543)
 
 
 dwl_specials <- dWL_all %>%
-  filter(abs(slope) >= 1 &
+  filter(abs(slope) >= 0.7 &
            p.value < 0.05) %>% #I think it would be better to not show a trend line for "No Trend"
+  # Try other pvalues to select slightly different lake for plotting; original p.value <= 0.05
   group_by(Trend) %>%
   slice(which.max(ann_dWL)) %>%
   pull(lagoslakeid )
@@ -171,9 +174,10 @@ png(filename = 'Figures/Figure3.Trend Examples_updated.png',
 
 ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   geom_abline(aes(intercept = intercept, slope = slope), color="grey50", size=0.1, alpha=0.5) + #background Sen's slopes
-  geom_abline(data = full_spec, 
-              aes(intercept = intercept, slope = slope, color=Trend),
-              size=1) + #Sen's slope for selected sites
+  # Next chunk is meant to add the regression line across the plot - not currently working correctly
+  # geom_abline(data = full_spec,
+  #             aes(intercept = intercept, slope = slope, color=Trend),
+  #             size=1) + #Sen's slope for selected sites
   geom_point(data = full_spec, aes(fill=Trend), shape=21) + 
   scale_fill_manual(values=trendColors)+
   scale_color_manual(values=trendColors)+
@@ -184,18 +188,18 @@ ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
   scale_x_continuous(breaks=seq(1986, 2018, 6))+
   scale_y_continuous(breaks=seq(500, 575, 25))+
   facet_wrap(~Trend, nrow=5) + 
-  theme_classic()+
+  theme_few()+
   theme(legend.position="none",
         plot.margin = unit(c(0,0.2,0,0), "cm"),)+
   labs(y="Dominant wavelength (nm)",
-       x="Year") 
+       x="Year") +
   
   ggplot(dWL_all %>%
            distinct(lagoslakeid,.keep_all = T),aes(x=slope,color=Trend)) + 
   geom_freqpoly(bins = 20, size = 1) + 
   geom_vline(xintercept=0, linetype="dashed", size=0.5)+
   facet_wrap(~Trend, nrow=5, scales="free_y") +
-  theme_classic() + 
+  theme_few() + 
   scale_y_continuous(position="right")+
   scale_x_continuous(breaks=seq(-1.5, 1.5, 1))+
   theme(legend.position="none",
@@ -209,10 +213,87 @@ ggplot(dWL_all, aes(x = year, y = ann_dWL, group = lagoslakeid)) +
 
 dev.off()
 
+# Within the categories - which have slope that leads to change in greater than 5 over the record
+# how many lakes within the categories have a fairly substantial change
+# 5 nm detectable with human eye
+# table - 
+#statistically significant change
+# ecologically meaningful
 
+study_period <- range(dWL_all$year)
+len_study_period = abs(study_period[1] - study_period[2])
 
-## Investigate why there are NAs in the dataframe
-investNA <- dWL_all %>% 
-  filter(is.na(Trend))
+# Define ecologically signficant change as greater than 5 nm change over length of study period
+# Calculate minimum slope necessary to reach this
+min_ecoSig_slope_studyPeriod  = (len_study_period/5) 
+min_ecoSig_slope_year  = min_ecoSig_slope_studyPeriod / len_study_period
 
-unique(investNA$lagoslakeid)
+# Make dataframe with average slope over entire study period
+dWL_all_studyPeriod <- dWL_all %>% 
+  select(lagoslakeid, group, Trend, slope) %>% 
+  distinct(slope, Trend, group) %>% 
+  mutate(study_period_slope = slope*len_study_period) %>% 
+  mutate(ecologically_sig = case_when(study_period_slope >= 5 ~ "yes", .default = "no"))
+
+# Create df for table to summarize number of lakes by category that are stat sig vs ecologically significant 
+sig_comparison_table <- dWL_all_studyPeriod %>% 
+  #filter(ecologically_sig == 'yes') %>% 
+  group_by(Trend, ecologically_sig) %>% 
+  count()
+
+sig_comparison_table <- dWL_all_studyPeriod %>% 
+  ungroup() %>% 
+  count(Trend, ecologically_sig) %>%
+  group_by(Trend) %>%
+  mutate(sum=sum(n)) %>%
+  group_by(Trend, ecologically_sig, sum, n) %>%
+  summarize(perc = (n/sum)* 100) %>% 
+  pivot_wider(names_from = ecologically_sig, values_from = c(n, perc)) #pivot wider for easier viewing
+
+sig_comparison_table_df <- as.data.frame(sig_comparison_table) %>% 
+  rename(Total = sum) 
+
+sig_comparison_table_df$No = paste0(round(sig_comparison_table_df$perc_no, 2), "% (", sig_comparison_table_df$n_no, ")")
+sig_comparison_table_df$Yes = paste0(round(sig_comparison_table_df$perc_yes, 2), "% (", sig_comparison_table_df$n_yes, ")")
+sig_comparison_table_df <- sig_comparison_table_df %>% 
+  select(Trend, No, Yes)
+
+# Make table
+eco_sig_table <- gt(sig_comparison_table_df) %>% 
+  tab_header(
+    title = "Ecologically Significant Changes in Lake Color") %>% 
+  cols_align(align = "left") %>% 
+  tab_style(
+    style = cell_fill(color = 'grey90',),
+    locations = cells_body(rows = Trend ==  'No trend')
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = '#1f78b4',),
+    locations = cells_body(rows = Trend ==  'Intensifying Blue')
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = '#a6cee3',),
+    locations = cells_body(rows = Trend ==  'Green -> Bluer')
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = '#33a02c',),
+    locations = cells_body(rows = Trend ==  'Intensifying Green/brown')
+  ) %>% 
+  tab_style(
+    style = cell_fill(color = '#b2df8a',),
+    locations = cells_body(rows = Trend ==  'Blue -> Greener')
+  ) 
+eco_sig_table
+
+# 
+# #Export
+# png(filename = 'Figures/EcologicallySignficantChangesLakeColor.png',
+#     width = 4,
+#     height = 3,
+#     res = 600,
+#     units = 'in')
+# 
+# eco_sig_table
+# 
+# dev.off()
+
