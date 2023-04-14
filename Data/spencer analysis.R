@@ -5,10 +5,11 @@ library(ggridges)
 library(viridis)
 library(ggeffects)
 library(lme4)
-
-
-
-
+library(sf)
+library(mapview)
+library(lattice)
+library(leafpop)
+library(RColorBrewer)
 
 
 
@@ -39,29 +40,43 @@ bg.fui = tibble(
     "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04")
 )
 
+
 ggplot() +
   geom_rect(data = bg.fui, 
             aes(xmin = ymin, xmax = ymax, ymin = -Inf, ymax = Inf, fill = color)) +
   geom_density_ridges(data=masterDF,  aes(x = dWL, y = lake_centroidstate),
                       scale= 1, alpha = 0.5, rel_min_height = 0.01) +
   scale_fill_identity() +
-  scale_x_continuous(expand = c(0, 0)) 
+  scale_x_continuous(expand = c(0, 0))
 
 
 
 ggplot() +
   geom_rect(data = bg.fui, 
             aes(xmin = ymin, xmax = ymax, ymin = -Inf, ymax = Inf, fill = color)) +
-  geom_density_ridges(data=masterDF,  aes(x = dWL, y = as.factor(year), fill = "black"),
+  geom_density_ridges(data=masterDF,  aes(x = dWL, y = lake_connectivity_class),
                       scale= 1, alpha = 0.5, rel_min_height = 0.01) +
   scale_fill_identity() +
-  scale_x_continuous(expand = c(0, 0)) 
+  scale_x_continuous(expand = c(0, 0))  +
+  facet_wrap(~lake_centroidstate)
 
 
 
+
+ggplot() +
+  geom_rect(data = bg.fui, 
+            aes(xmin = ymin, xmax = ymax, ymin = -Inf, ymax = Inf, fill = color)) +
+  geom_density_ridges(data=masterDF,  aes(x = lake_lat_decdeg, y = as.factor(year), fill = "black"),
+                      scale= 1, alpha = 0.5, rel_min_height = 0.01) +
+  scale_fill_identity() +
+  scale_x_continuous(expand = c(0, 0))   +
+  facet_wrap(~lake_centroidstate)
+
+
+#### Wyoming ####
 
 WY<-masterDF[masterDF$lake_centroidstate=="WY",]
-
+WY2021<-WY[WY$year=="2021",]
 
 ggplot() +
   geom_rect(data = bg.fui, 
@@ -70,3 +85,103 @@ ggplot() +
                       scale= 1, alpha = 0.5, rel_min_height = 0.01) +
   scale_fill_identity() +
   scale_x_continuous(expand = c(0, 0)) 
+
+
+ggplot(WY, mapping = aes(x = lake_lat_decdeg, y = dWL)) +
+  geom_point(size = 3, shape = 20, alpha = 0.5) +
+  geom_smooth(method=lm)
+
+
+
+
+mapview(WY2021, 
+        zcol = "dWL", 
+        xcol = "lake_lon_decdeg", 
+        ycol = "lake_lat_decdeg", 
+        crs = 4269, 
+        grid = FALSE)
+
+
+#ggplot maps
+
+ggWY2021 <- st_as_sf(WY2021,
+                        coords= c("lake_lon_decdeg", "lake_lat_decdeg"),
+                        crs=4326) %>%
+  mutate(lagoslakeid=factor(lagoslakeid))
+
+ggplot()+
+  geom_sf(data = ggWY2021, alpha = .5)+
+  ggtitle("Wyoming Lakes 2021")
+
+
+
+
+#convert df to spatial object
+LAGOS_WE_sp <- st_as_sf(masterDF,
+                        coords= c("lake_lon_decdeg", "lake_lat_decdeg"),
+                        crs=4326) %>%
+  filter(year == "2021") %>%
+  mutate(lagoslakeid=factor(lagoslakeid))
+
+class(LAGOS_WE_sp)
+
+#plot our plot locations
+ggplot()+
+  geom_sf(data = LAGOS_WE_sp, alpha = .5)+
+  ggtitle("Map of Western US lakes locations") +
+  scale_fill_gradient()
+  
+
+
+#### The Four 2021 ####
+
+firstfour<-masterDF[masterDF$lake_centroidstate==c("WY", "CO", "MT", "ID"),]
+firstfour2021<-firstfour[firstfour$year=="2021",]
+
+
+
+mapview(firstfour2021, 
+        zcol = "dWL", 
+        xcol = "lake_lon_decdeg", 
+        ycol = "lake_lat_decdeg", 
+        crs = 4269, 
+        grid = FALSE)
+
+
+ggplot(firstfour2021, mapping = aes(x = dWL , y = lake_elevation_m)) +
+  geom_point(size = 3, shape = 20, alpha = 0.5) +
+  geom_smooth()
+
+
+
+
+
+#### The Four 1991 ####
+
+firstfour1991<-firstfour[firstfour$year=="1991",]
+
+
+
+mapview(firstfour1991, 
+        zcol = "dWL", 
+        xcol = "lake_lon_decdeg", 
+        ycol = "lake_lat_decdeg", 
+        crs = 4269, 
+        grid = FALSE)
+
+
+
+
+
+#### added more ####
+
+masterdf2021<-masterDF[masterDF$year=="2021",]
+
+
+mapview(masterdf2021, 
+        zcol = "dWL", 
+        xcol = "lake_lon_decdeg", 
+        ycol = "lake_lat_decdeg", 
+        crs = 4269, 
+        grid = FALSE)
+
