@@ -305,64 +305,211 @@ abline(lm(green$diff_dWL~green$dist_km), col="red")
 
 
 
-
 ```{r}
-require(geopshere)
+WYNV<-mast[mast$lake_centroidstate%in%c("WY","NV"),]
+WYNV_2021<-WYNV[WYNV$year==1991,]
 
-#can reaload data from here, or just use the qp2 object
-qpn<-qp2$result[,c("sample1","sample2","RC")]
-names(qpn)[1]<-"s1_samp_names"
-names(qpn)[2]<-"s2_samp_names"
+length(unique(WYNV_2021$lagoslakeid))
+unique(mast$year)
 
-
-dfr <- reshape(qpn, direction="wide", idvar="s1_samp_names", timevar="s2_samp_names")
-rownames(dfr)<-dfr$s1_samp_names
-dfr$s1_samp_names<-NULL
-colnames(dfr)<-str_split_fixed(colnames(dfr),"RC[.]",n=2)[,2]
-dfr$SV0426L<-rep(NA,nrow(dfr))
-dfr[nrow(dfr)+1,] <- NA
-rownames(dfr)[478]<-"33_1_10_DNA"
-
-dfr<-dfr[order(row.names(dfr)), ]
-table(rownames(dfr)==colnames(dfr)) #all true
-table(rownames(dfr)%in%metadata$samp_names) #all true
-table(colnames(dfr)%in%metadata$samp_names) # all true
-
-RCbray<-as.dist(dfr)
-
-#now add in environmental distances (lake bottom water and lake depth)
-#using objects from above
-variables<-c("max_lake_depth"         
-, "water_sample_ph_bot"     
-, "water_sample_do_bot"     
-, "water_sample_t_bot") 
-
-#pull out metadata
-metadata<-metadata[order(match(rownames(metadata),colnames(dfr))),]
-metadata_sub<-metadata[,names(metadata)%in%variables]
+xy <- data.frame(X =WYNV_2021$lake_lon_decdeg, Y = WYNV_2021$lake_lat_decdeg, lakeID=WYNV_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
 
 
-table(colnames(dfr)==metadata$samp_names) # all true
-table(colnames(dfr)==rownames(metadata_sub)) # all true 
-
-env_dist <- as.dist(as.matrix(daisy(scale(metadata_sub), metric="gower")))
-table(labels(RCbray)==labels(env_dist))
-
-
-# geographic distance
-
-#Lat&lon to distance in meters
-xy <- data.frame(X = metadata$longitude, Y = metadata$latitude)
-rownames(xy)<-metadata$samp_names
 dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
 rownames(dist_m_output)<-rownames(xy)
 names(dist_m_output)<-rownames(xy)
+
 geo_dist<-as.dist(dist_m_output)
 
-#check to make sure all labels match!
-table(labels(RCbray)==labels(env_dist)) #all true
-table(labels(RCbray)==labels(geo_dist)) #all true
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-WYNV_2021[,names(WYNV_2021) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
 
 
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
+```
+
+
+```{r}
+WYNV<-mast[mast$lake_centroidstate%in%c("WY","NV"),]
+WYNV_2021<-WYNV[WYNV$year==2021,]
+
+length(unique(WYNV_2021$lagoslakeid))
+unique(mast$year)
+
+xy <- data.frame(X =WYNV_2021$lake_lon_decdeg, Y = WYNV_2021$lake_lat_decdeg, lakeID=WYNV_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+
+
+sub1<-WYNV_2021[,names(WYNV_2021) %in% c("lagoslakeid","dWL", "lake_elevation_m")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub2<-inner_join(sub2,tmp)
+sub3<-sub2
+
+
+names(sub2)<-c("lake1","dWL_1","elev_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2","elev_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+pairwise$diff_elev<-abs(pairwise$elev_2-pairwise$elev_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
+```
+
+
+
+```{r}
+IDAZ<-mast[mast$lake_centroidstate%in%c("ID","AZ"),]
+IDAZ_2021<-IDAZ[IDAZ$year==1991,]
+
+length(unique(IDAZ_2021$lagoslakeid))
+unique(mast$year)
+
+xy <- data.frame(X =IDAZ_2021$lake_lon_decdeg, Y = IDAZ_2021$lake_lat_decdeg, lakeID=IDAZ_2021$lagoslakeid)
+xy<-unique(xy)
+rownames(xy)<-paste("A",xy$lakeID, sep="_")
+xy$lakeID<-NULL
+
+
+dist_m_output<-distm(xy)
+
+dist_m_output<-as.data.frame(dist_m_output)
+rownames(dist_m_output)<-rownames(xy)
+names(dist_m_output)<-rownames(xy)
+
+geo_dist<-as.dist(dist_m_output)
+
+
+dist_m_output[upper.tri(dist_m_output, diag = T)] <- NA
+
+dist_m<-data.frame(t(combn(names(dist_m_output),2)), dist=t(dist_m_output)[upper.tri(dist_m_output)] )
+
+dist_m$dist_km<-dist_m$dist/1000
+
+names(dist_m)<-c("lake1","lake2","dist_m","dist_km")
+pairwise<-dist_m
+
+sub1<-IDAZ_2021[,names(IDAZ_2021) %in% c("lagoslakeid","dWL")]
+length(unique(sub1$lagoslakeid))
+
+sub2<-sub1 %>% group_by(lagoslakeid) %>% summarise(dWL=median(dWL,na.rm=T))
+sub3<-sub2
+
+names(sub2)<-c("lake1","dWL_1")
+sub2$lake1<-paste("A",sub2$lake1, sep="_")
+names(sub3)<-c("lake2","dWL_2")
+sub3$lake2<-paste("A",sub3$lake2, sep="_")
+
+pairwise<-inner_join(sub2,pairwise)
+pairwise<-inner_join(sub3,pairwise)
+
+pairwise$diff_dWL<-abs(pairwise$dWL_2-pairwise$dWL_1)
+
+
+plot(pairwise$dist_km, pairwise$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise$diff_dWL~pairwise$dist_km), col="red")
+summary(lm(pairwise$diff_dWL~pairwise$dist_km))
+
+pairwise_far<-pairwise[pairwise$dist_km>1000,]
+plot(pairwise_far$dist_km, pairwise_far$diff_dWL, ylab="Difference in lake color", xlab="Distance (km)")
+abline(lm(pairwise_far$diff_dWL~pairwise_far$dist_km), col="red")
+summary(lm(pairwise_far$diff_dWL~pairwise_far$dist_km))
+
+
+
+
+blue<-pairwise[pairwise$dWL_1<530 & pairwise$dWL_2<530,]
+
+plot(blue$dist_km, blue$diff_dWL, ylab="Difference in lake color of blue", xlab="Distance (km)")
+abline(lm(blue$diff_dWL~blue$dist_km), col="red")
+
+
+green<-pairwise[pairwise$dWL_1>530 & pairwise$dWL_2>530,]
+
+plot(green$dist_km, green$diff_dWL, ylab="Difference in lake color of green", xlab="Distance (km)")
+abline(lm(green$diff_dWL~green$dist_km), col="red")
 ```
 
