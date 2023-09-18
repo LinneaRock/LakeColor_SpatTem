@@ -822,8 +822,24 @@ detach(dt3)
 elev_data <- dt1 
 rm(dt1)
 
+elev_data <- elev_data |>
+  select(lagoslakeid, lake_elevation_m)
+
+saveRDS(elev_data, 'Data/elev_data.RDS')
+
 hydro_data <- dt2
 rm(dt2)
 
+hydro_data <- hydro_data |>
+  select(lagoslakeid, lake_waterarea_ha, lake_perimeter_m, lake_islandperimeter_m, lake_connectivity_class,
+         lake_connectivity_permanent) |>
+   mutate(lake_totalperimeter_m = lake_islandperimeter_m + lake_perimeter_m)
+saveRDS(hydro_data, 'Data/hydro_data.RDS')
+
+
 watershed_data <- dt3
 rm(dt3)
+
+watershed_data <- watershed_data |>
+  select(lagoslakeid, ws_area_ha, ws_lake_arearatio)
+saveRDS(watershed_data, 'Data/watershed_data.RDS')

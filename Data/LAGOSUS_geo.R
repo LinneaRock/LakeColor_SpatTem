@@ -8,54 +8,54 @@
 # # Contact:  Kendra Cheruvelil -  Michigan State University  - ksc@msu.edu
 # # Stylesheet v2.11 for metadata conversion into program: John H. Porter, Univ. Virginia, jporter@virginia.edu 
 # 
-# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/edi/1136/2/add975113c90ccbc1479c0913172736a" 
+# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/edi/1136/2/add975113c90ccbc1479c0913172736a"
 # infile1 <- tempfile()
 # try(download.file(inUrl1,infile1,method="curl"))
 # if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
 # 
-# 
-# dt1 <-read.csv(infile1,header=F 
+# # 
+# dt1 <-read.csv(infile1,header=F
 #                ,skip=1
-#                ,sep=","  
-#                ,quot='"' 
+#                ,sep=","
+#                ,quot='"'
 #                , col.names=c(
-#                  "dictionary_type",     
-#                  "table_name",     
-#                  "variable_name",     
-#                  "variable_description",     
-#                  "taxonomy_type",     
-#                  "main_feature",     
-#                  "subgroup",     
-#                  "units",     
-#                  "in_lagosne",     
-#                  "data_type",     
-#                  "domain",     
-#                  "precision",     
-#                  "missing_values",     
-#                  "column_index",     
-#                  "variable_source_code1",     
-#                  "variable_source_code2",     
-#                  "methods_tool1",     
-#                  "methods_tool2",     
-#                  "year_min",     
-#                  "year_max",     
-#                  "year_n",     
-#                  "source_value_code",     
-#                  "lake",     
-#                  "buff100",     
-#                  "buff500",     
-#                  "ws",     
-#                  "nws",     
-#                  "hu12",     
-#                  "hu4",     
-#                  "hu8",     
-#                  "county",     
-#                  "state",     
-#                  "bailey",     
-#                  "epanutr",     
-#                  "mlra",     
-#                  "neon",     
-#                  "omernik3",     
+#                  "dictionary_type",
+#                  "table_name",
+#                  "variable_name",
+#                  "variable_description",
+#                  "taxonomy_type",
+#                  "main_feature",
+#                  "subgroup",
+#                  "units",
+#                  "in_lagosne",
+#                  "data_type",
+#                  "domain",
+#                  "precision",
+#                  "missing_values",
+#                  "column_index",
+#                  "variable_source_code1",
+#                  "variable_source_code2",
+#                  "methods_tool1",
+#                  "methods_tool2",
+#                  "year_min",
+#                  "year_max",
+#                  "year_n",
+#                  "source_value_code",
+#                  "lake",
+#                  "buff100",
+#                  "buff500",
+#                  "ws",
+#                  "nws",
+#                  "hu12",
+#                  "hu4",
+#                  "hu8",
+#                  "county",
+#                  "state",
+#                  "bailey",
+#                  "epanutr",
+#                  "mlra",
+#                  "neon",
+#                  "omernik3",
 #                  "wwf"    ), check.names=TRUE)
 # 
 # unlink(infile1)
@@ -73,20 +73,20 @@
 # if (class(dt1$in_lagosne)!="factor") dt1$in_lagosne<- as.factor(dt1$in_lagosne)
 # if (class(dt1$data_type)!="factor") dt1$data_type<- as.factor(dt1$data_type)
 # if (class(dt1$domain)!="factor") dt1$domain<- as.factor(dt1$domain)
-# if (class(dt1$precision)=="factor") dt1$precision <-as.numeric(levels(dt1$precision))[as.integer(dt1$precision) ]               
+# if (class(dt1$precision)=="factor") dt1$precision <-as.numeric(levels(dt1$precision))[as.integer(dt1$precision) ]
 # if (class(dt1$precision)=="character") dt1$precision <-as.numeric(dt1$precision)
 # if (class(dt1$missing_values)!="factor") dt1$missing_values<- as.factor(dt1$missing_values)
-# if (class(dt1$column_index)=="factor") dt1$column_index <-as.numeric(levels(dt1$column_index))[as.integer(dt1$column_index) ]               
+# if (class(dt1$column_index)=="factor") dt1$column_index <-as.numeric(levels(dt1$column_index))[as.integer(dt1$column_index) ]
 # if (class(dt1$column_index)=="character") dt1$column_index <-as.numeric(dt1$column_index)
 # if (class(dt1$variable_source_code1)!="factor") dt1$variable_source_code1<- as.factor(dt1$variable_source_code1)
 # if (class(dt1$variable_source_code2)!="factor") dt1$variable_source_code2<- as.factor(dt1$variable_source_code2)
 # if (class(dt1$methods_tool1)!="factor") dt1$methods_tool1<- as.factor(dt1$methods_tool1)
 # if (class(dt1$methods_tool2)!="factor") dt1$methods_tool2<- as.factor(dt1$methods_tool2)
-# if (class(dt1$year_min)=="factor") dt1$year_min <-as.numeric(levels(dt1$year_min))[as.integer(dt1$year_min) ]               
+# if (class(dt1$year_min)=="factor") dt1$year_min <-as.numeric(levels(dt1$year_min))[as.integer(dt1$year_min) ]
 # if (class(dt1$year_min)=="character") dt1$year_min <-as.numeric(dt1$year_min)
-# if (class(dt1$year_max)=="factor") dt1$year_max <-as.numeric(levels(dt1$year_max))[as.integer(dt1$year_max) ]               
+# if (class(dt1$year_max)=="factor") dt1$year_max <-as.numeric(levels(dt1$year_max))[as.integer(dt1$year_max) ]
 # if (class(dt1$year_max)=="character") dt1$year_max <-as.numeric(dt1$year_max)
-# if (class(dt1$year_n)=="factor") dt1$year_n <-as.numeric(levels(dt1$year_n))[as.integer(dt1$year_n) ]               
+# if (class(dt1$year_n)=="factor") dt1$year_n <-as.numeric(levels(dt1$year_n))[as.integer(dt1$year_n) ]
 # if (class(dt1$year_n)=="character") dt1$year_n <-as.numeric(dt1$year_n)
 # if (class(dt1$source_value_code)!="factor") dt1$source_value_code<- as.factor(dt1$source_value_code)
 # if (class(dt1$lake)!="factor") dt1$lake<- as.factor(dt1$lake)
@@ -114,17 +114,17 @@
 # dt1$units <- as.factor(ifelse((trimws(as.character(dt1$units))==trimws("NA")),NA,as.character(dt1$units)))
 # dt1$in_lagosne <- as.factor(ifelse((trimws(as.character(dt1$in_lagosne))==trimws("NA")),NA,as.character(dt1$in_lagosne)))
 # dt1$domain <- as.factor(ifelse((trimws(as.character(dt1$domain))==trimws("NA")),NA,as.character(dt1$domain)))
-# dt1$column_index <- ifelse((trimws(as.character(dt1$column_index))==trimws("NA")),NA,dt1$column_index)               
+# dt1$column_index <- ifelse((trimws(as.character(dt1$column_index))==trimws("NA")),NA,dt1$column_index)
 # suppressWarnings(dt1$column_index <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$column_index))==as.character(as.numeric("NA"))),NA,dt1$column_index))
 # dt1$variable_source_code1 <- as.factor(ifelse((trimws(as.character(dt1$variable_source_code1))==trimws("NA")),NA,as.character(dt1$variable_source_code1)))
 # dt1$variable_source_code2 <- as.factor(ifelse((trimws(as.character(dt1$variable_source_code2))==trimws("NA")),NA,as.character(dt1$variable_source_code2)))
 # dt1$methods_tool1 <- as.factor(ifelse((trimws(as.character(dt1$methods_tool1))==trimws("NA")),NA,as.character(dt1$methods_tool1)))
 # dt1$methods_tool2 <- as.factor(ifelse((trimws(as.character(dt1$methods_tool2))==trimws("NA")),NA,as.character(dt1$methods_tool2)))
-# dt1$year_min <- ifelse((trimws(as.character(dt1$year_min))==trimws("NA")),NA,dt1$year_min)               
+# dt1$year_min <- ifelse((trimws(as.character(dt1$year_min))==trimws("NA")),NA,dt1$year_min)
 # suppressWarnings(dt1$year_min <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$year_min))==as.character(as.numeric("NA"))),NA,dt1$year_min))
-# dt1$year_max <- ifelse((trimws(as.character(dt1$year_max))==trimws("NA")),NA,dt1$year_max)               
+# dt1$year_max <- ifelse((trimws(as.character(dt1$year_max))==trimws("NA")),NA,dt1$year_max)
 # suppressWarnings(dt1$year_max <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$year_max))==as.character(as.numeric("NA"))),NA,dt1$year_max))
-# dt1$year_n <- ifelse((trimws(as.character(dt1$year_n))==trimws("NA")),NA,dt1$year_n)               
+# dt1$year_n <- ifelse((trimws(as.character(dt1$year_n))==trimws("NA")),NA,dt1$year_n)
 # suppressWarnings(dt1$year_n <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$year_n))==as.character(as.numeric("NA"))),NA,dt1$year_n))
 # dt1$source_value_code <- as.factor(ifelse((trimws(as.character(dt1$source_value_code))==trimws("NA")),NA,as.character(dt1$source_value_code)))
 # dt1$lake <- as.factor(ifelse((trimws(as.character(dt1$lake))==trimws("NA")),NA,as.character(dt1$lake)))
@@ -146,9 +146,9 @@
 # 
 # 
 # # Here is the structure of the input data frame:
-# str(dt1)                            
-# attach(dt1)                            
-# # The analyses below are basic descriptions of the variables. After testing, they should be replaced.                 
+# str(dt1)
+# attach(dt1)
+# # The analyses below are basic descriptions of the variables. After testing, they should be replaced.
 # 
 # summary(dictionary_type)
 # summary(table_name)
@@ -187,44 +187,44 @@
 # summary(mlra)
 # summary(neon)
 # summary(omernik3)
-# summary(wwf) 
+# summary(wwf)
 # # Get more details on character variables
 # 
-# summary(as.factor(dt1$dictionary_type)) 
-# summary(as.factor(dt1$table_name)) 
-# summary(as.factor(dt1$variable_name)) 
-# summary(as.factor(dt1$variable_description)) 
-# summary(as.factor(dt1$taxonomy_type)) 
-# summary(as.factor(dt1$main_feature)) 
-# summary(as.factor(dt1$subgroup)) 
-# summary(as.factor(dt1$units)) 
-# summary(as.factor(dt1$in_lagosne)) 
-# summary(as.factor(dt1$data_type)) 
-# summary(as.factor(dt1$domain)) 
-# summary(as.factor(dt1$missing_values)) 
-# summary(as.factor(dt1$variable_source_code1)) 
-# summary(as.factor(dt1$variable_source_code2)) 
-# summary(as.factor(dt1$methods_tool1)) 
-# summary(as.factor(dt1$methods_tool2)) 
-# summary(as.factor(dt1$source_value_code)) 
-# summary(as.factor(dt1$lake)) 
-# summary(as.factor(dt1$buff100)) 
-# summary(as.factor(dt1$buff500)) 
-# summary(as.factor(dt1$ws)) 
-# summary(as.factor(dt1$nws)) 
-# summary(as.factor(dt1$hu12)) 
-# summary(as.factor(dt1$hu4)) 
-# summary(as.factor(dt1$hu8)) 
-# summary(as.factor(dt1$county)) 
-# summary(as.factor(dt1$state)) 
-# summary(as.factor(dt1$bailey)) 
-# summary(as.factor(dt1$epanutr)) 
-# summary(as.factor(dt1$mlra)) 
-# summary(as.factor(dt1$neon)) 
-# summary(as.factor(dt1$omernik3)) 
+# summary(as.factor(dt1$dictionary_type))
+# summary(as.factor(dt1$table_name))
+# summary(as.factor(dt1$variable_name))
+# summary(as.factor(dt1$variable_description))
+# summary(as.factor(dt1$taxonomy_type))
+# summary(as.factor(dt1$main_feature))
+# summary(as.factor(dt1$subgroup))
+# summary(as.factor(dt1$units))
+# summary(as.factor(dt1$in_lagosne))
+# summary(as.factor(dt1$data_type))
+# summary(as.factor(dt1$domain))
+# summary(as.factor(dt1$missing_values))
+# summary(as.factor(dt1$variable_source_code1))
+# summary(as.factor(dt1$variable_source_code2))
+# summary(as.factor(dt1$methods_tool1))
+# summary(as.factor(dt1$methods_tool2))
+# summary(as.factor(dt1$source_value_code))
+# summary(as.factor(dt1$lake))
+# summary(as.factor(dt1$buff100))
+# summary(as.factor(dt1$buff500))
+# summary(as.factor(dt1$ws))
+# summary(as.factor(dt1$nws))
+# summary(as.factor(dt1$hu12))
+# summary(as.factor(dt1$hu4))
+# summary(as.factor(dt1$hu8))
+# summary(as.factor(dt1$county))
+# summary(as.factor(dt1$state))
+# summary(as.factor(dt1$bailey))
+# summary(as.factor(dt1$epanutr))
+# summary(as.factor(dt1$mlra))
+# summary(as.factor(dt1$neon))
+# summary(as.factor(dt1$omernik3))
 # summary(as.factor(dt1$wwf))
-# detach(dt1)               
-
+# detach(dt1)
+# 
 
 # inUrl2  <- "https://pasta.lternet.edu/package/data/eml/edi/1136/2/ae308ba0638717dbbaac5ba25e7f88e5" 
 # infile2 <- tempfile()
@@ -1132,8 +1132,16 @@ detach(dt10)
 climate_data <- dt6 
 rm(dt6)
 
+climate_data <- climate_data |>
+  rename(hu12_zoneid = zoneid) |>
+  select(-spatial_division)
+
 landcover_data <- dt10
 rm(dt10)
+
+landcover_data <- landcover_data |>
+  select(-precision) |>
+  filter(spatial_division %in% c('epanutr', 'hu12'))
 
 saveRDS(climate_data, 'Data/climate_data.RDS')
 saveRDS(landcover_data, 'Data/landcover_data.RDS')

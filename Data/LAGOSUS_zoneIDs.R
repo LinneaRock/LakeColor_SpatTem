@@ -205,3 +205,8 @@ summary(as.factor(zoneIDs$mlra_zoneid))
 summary(as.factor(zoneIDs$bailey_zoneid)) 
 summary(as.factor(zoneIDs$neon_zoneid))
 detach(zoneIDs)               
+
+
+zoneids_data <- zoneIDs |>
+  select(lagoslakeid, lake_nhdid, epanutr_zoneid, hu12_zoneid)
+saveRDS(zoneids_data, 'Data/zoneids_data.RDS')
