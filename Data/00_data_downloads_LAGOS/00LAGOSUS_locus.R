@@ -823,7 +823,7 @@ elev_data <- dt1
 rm(dt1)
 
 elev_data <- elev_data |>
-  select(lagoslakeid, lake_elevation_m)
+  select(lagoslakeid, lake_elevation_m, lake_lat_decdeg, lake_lon_decdeg)
 
 saveRDS(elev_data, 'Data/elev_data.RDS')
 
