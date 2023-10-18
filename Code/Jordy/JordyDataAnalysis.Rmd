@@ -1,0 +1,246 @@
+---
+title: "Jordy_Data_Analysis"
+author: "Jordan Von Eggers"
+date: "2023-10-18"
+output: html_document
+---
+
+
+#Data exploration
+
+```{r}
+require(tidyverse)
+load("new_limnosat_20230927.RData")
+lake_data<-readRDS("20230929_lagos_data.rds")
+load("2023-10-13_JordyDataExploration.RData")
+
+#how many lakes in limnosat data?
+length(unique(new_limnosat$lake_nhdid))
+#192446
+
+#how many lakes in limnosat have lagos data in general?
+table(unique(new_limnosat$lake_nhdid)%in%unique(lake_data$lake_nhdid))
+
+ # FALSE   TRUE 
+ # 44920 147526 
+ # 
+ 44920/147526 # approx 30% of the lakes don't have any Lagos data, 70% do (could still use lake area etc.)
+
+#how many lakes in limnosat have Lagos data for the correct year?
+limno_ids<-paste(new_limnosat$lake_ndhid,new_limnosat$year, sep="_")
+lagos_ids<-paste(lake_data$lake_ndhid,lake_data$year, sep="_")
+table(limno_ids%in%lagos_ids)
+#    FALSE     TRUE 
+# 50463867 13145726
+13145726/50463867 #26% of the limnosat data has lagos data for the same year. 
+
+#what is the lagos year range?
+unique(lake_data$year)
+# 2001 2004 2006 2008 2011 2013 2016
+
+#what is the limnosat year range?
+unique(new_limnosat$year)
+# [1] 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998
+# [16] 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013
+# [31] 2014 2015 2016 2017 2018 2019 2020 2021
+
+names(lake_data)
+#  [1] "lagoslakeid"                 "lake_nhdid"                 
+#  [3] "epanutr_zoneid"              "hu12_zoneid"                
+#  [5] "lake_elevation_m"            "lake_lat_decdeg"            
+#  [7] "lake_lon_decdeg"             "lake_waterarea_ha"          
+#  [9] "lake_perimeter_m"            "lake_islandperimeter_m"     
+# [11] "lake_connectivity_class"     "lake_connectivity_permanent"
+# [13] "lake_totalperimeter_m"       "ws_area_ha"                 
+# [15] "ws_lake_arearatio"           "year"                       
+# [17] "datacoveragepct"             "nlcd_barren31_pct"          
+# [19] "nlcd_cultcrop82_pct"         "nlcd_devhi24_pct"           
+# [21] "nlcd_devlow22_pct"           "nlcd_devmed23_pct"          
+# [23] "nlcd_devopen21_pct"          "nlcd_forcon42_pct"          
+# [25] "nlcd_fordec41_pct"           "nlcd_formix43_pct"          
+# [27] "nlcd_grass71_pct"            "nlcd_icesnow12_pct"         
+# [29] "nlcd_openwater11_pct"        "nlcd_past81_pct"            
+# [31] "nlcd_shrub52_pct"            "nlcd_wetemerg95_pct"        
+# [33] "nlcd_wetwood90_pct"   
+
+
+names(new_limnosat)
+# [1] "date"             "lake_nhdid"       "year"             "dWL"             
+# [5] "brightness"       "normalized_green" "Nir"  
+
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+load("new_limnosat_20230927.RData")
+lake_data<-readRDS("20230929_lagos_data.rds")
+
+limnosat_fulldataset<-left_join(new_limnosat, lake_data)
+#Joining with `by = join_by(lake_nhdid, year)`
+
+
+
+# Extract only the month and day
+new_limnosat$date_m_d <- format(new_limnosat$date, format = "%m-%d")
+
+# Filter the data frame to include only dates between May 1 and October 31
+
+start_date <- format(as.Date("2023-05-01"), format = "%m-%d")
+end_date <- format(as.Date("2023-10-31"), format = "%m-%d")
+July_Sept_Limnosat <- new_limnosat[new_limnosat$date_m_d >= start_date & new_limnosat$date_m_d <= end_date, ]
+start_date; end_date
+nrow(July_Sept_Limnosat)
+#18421502
+nrow(new_limnosat)
+#63609593
+
+18421502/63609593 #0.2896026 - 29% of the data is July-Spet
+length(unique(July_Sept_Limnosat$lake_nhdid))
+#176485
+
+176485/192446 # we retain about 91% of the lakes when we subset by July- Sept 15
+192446-176485 # only lose about 15k lakes..
+
+
+#get rid of year plus column
+
+
+
+```
+
+
+# Thoughts/questions
+- some of these have names like - is this normal?
+
+[99969] "14884883-9aac-47a9-963f-9c23e4085918"  
+[99970] "149087458"                             
+[99971] "150661278"                             
+[99972] "155197250"                             
+[99973] "155197287"                             
+[99974] "157313322"                             
+[99975] "167309159"                             
+[99976] "59984368"                              
+[99977] "59984378"                              
+[99978] "83012293"                              
+[99979] "83027739"                              
+[99980] "83031775"                              
+[99981] "{012BBD13-B750-4F27-908A-0681C0331F65}"
+[99982] "{0F2A7C6C-3302-41F0-A059-9C199DDB9EF8}"
+
+- Do we want to exclude any data that doesn't have lagos metadata? At this point we don't have any location or other data in the limnosat data.
+
+-Hawaii and AK?
+- We merged Lagos data with the same ndh id and year, but we likely could go back through and make lagos data for each lake and merge using that. 
+        - lat/lon
+        - lake area, perimeter, island perimeter
+        - watershed area
+        - watershed lake area ratio
+        - connectivity class
+        - land cover - this could change..
+        
+- Bella's paper had MAAT and it was significant, I think we should find a way to include this data. PRISM data
+        
+        
+
+SCRAP CODE
+
+
+```{R}
+# limno_lakeid_year<-new_limnosat[,c(2,3)]
+# > nrow(limno_lakeid_year)
+# [1] 63609593
+# > limno_lakeid_year<-unique(limno_lakeid_year)
+# ^[^C
+# > require(stringr)
+# > limno_ids_uniq<-unique(limno_ids)
+# > limno_ids_uniq_split<-str_split_fixed(limno_ids_uniq,pattern="_",n = 2)
+# > head(limno_ids_uniq_split)
+#      [,1]        [,2]  
+# [1,] "138277543" "1984"
+# [2,] "138518530" "1984"
+# [3,] "143764566" "1984"
+# [4,] "143765598" "1984"
+# [5,] "143766002" "1984"
+# [6,] "143771932" "1984"
+# > limno_ids_uniq_split<-as.data.frame(str_split_fixed(limno_ids_uniq,pattern="_",n = 2))
+# > head(limno_ids_uniq_split)
+#          V1   V2
+# 1 138277543 1984
+# 2 138518530 1984
+# 3 143764566 1984
+# 4 143765598 1984
+# 5 143766002 1984
+# 6 143771932 1984
+# > nrow(limno_ids_uniq_split)
+# [1] 5792324
+# > names(limno_ids_uniq_split)<-c("lake_nhdid","year")
+# > ObsYearPerLake<-limno_ids_uniq_split %>% count(lake_nhdid)
+# > head(ObsYearPerLake)
+#                             lake_nhdid  n
+# 1 0007A9A3-C0D7-4C62-8A7E-E99A7B2CC1A1 34
+# 2 00148dc0-0f34-4fe6-bc96-3b18ee27f74c 37
+# 3 00791451-15D3-43A8-A3FE-3B3E405B6196  6
+# 4 0079468d-5e7d-4e46-b4d5-70a1038fc59e 28
+# 5 008e581a-498a-4a01-b53d-cf58eef5304f 38
+# 6 0091a8e5-48f4-4a0f-9eb5-4d4e565b0868 19
+# > rm(new_limnosat)
+# > rm(lake_data)
+# > save.image(paste0(Sys.Date(),"_JordyDataExploration.RData"))
+# > pdf(paste0(Sys.Date(),"_HistObsYearsPerLake.pdf"),height=6,width=7)
+# > hist(ObsYearPerLake$n)
+# > dev.off()
+```
+
+
+
+I think we want Ecoregion
+
+"","date","lake_nhdid","year","dWL","brightness","normalized_green","Nir",
+-what is "Nir"
+
+- GPS points with "lake_nhdid"
+
+"lagoslakeid","epanutr_zoneid","hu12_zoneid","lake_elevation_m","lake_lat_decdeg","lake_lon_decdeg","lake_waterarea_ha","lake_perimeter_m","lake_islandperimeter_m","lake_connectivity_class","lake_connectivity_permanent","lake_totalperimeter_m","ws_area_ha","ws_lake_arearatio","datacoveragepct","nlcd_barren31_pct","nlcd_cultcrop82_pct","nlcd_devhi24_pct","nlcd_devlow22_pct","nlcd_devmed23_pct","nlcd_devopen21_pct","nlcd_forcon42_pct","nlcd_fordec41_pct","nlcd_formix43_pct","nlcd_grass71_pct","nlcd_icesnow12_pct","nlcd_openwater11_pct","nlcd_past81_pct","nlcd_shrub52_pct","nlcd_wetemerg95_pct","nlcd_wetwood90_pct"
+
+
+some points have this as their lake_nhdid:
+{586F6665-D094-4ECC-9283-A0F8201FED73}"
+
+There is a lot of data that don't have any other metadata, do we want to include these?
+
+We need to double check what header names are the same in the dataset when they merge... 
+
+
+"How can you find the unique values of the 10th column in a CSV file in linux?"
+```{bash}
+cut -d ',' -f 10 2023-10-03_FullDataset_Limnosat_LAGOS.csv | sort | uniq
+
+```
+output: 
+"epanutr_1"
+"epanutr_2"
+"epanutr_3"
+"epanutr_4"
+"epanutr_5"
+"epanutr_6"
+"epanutr_7"
+"epanutr_8"
+"epanutr_9"
+"epanutr_zoneid"
+NA
+
+cut -d ',' -f 10 2023-10-04_Limnosat_2018.csv | sort | uniq
+#there are no ecoregions in the 2018 data.. so where are the ecoregions in terms of dates?
+
+/Users/jordanscheibe/Desktop/2018_hist.R
+
+
+looping in bash (can do $s, but if using an underscore after ${s}_)
+troubleshooting a bash file (set -x, I believe)
