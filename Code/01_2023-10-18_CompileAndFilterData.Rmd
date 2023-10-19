@@ -576,8 +576,9 @@ for(i in 1:length(unique(lake_year$lake_nhdid))){
         }
         print(i)
 }
+save.image(paste0(Sys.Date(),"_TEMPORAL_Tempfile.RData"))
 
-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[setdiff(limnosat_may_oct_lagos_30yrs$lake_nhdid,lake_rm),]
+limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[setdiff(limnosat_may_oct_lagos_30yrs$lake_nhdid,lakes_rm),]
 
 #how many lakes?
 length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))
@@ -600,8 +601,8 @@ run_Filter_Limnosat_May_Oct_Lagos_For_Temporal.sh
 ```{bash}
 #!/bin/bash
 #SBATCH --job-name Filter_Limnosat_May_Oct_Lagos_For_Temporal
-#SBATCH --mem=110GB
-#SBATCH --time=1-00:00:00
+#SBATCH --mem=60GB
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --account=microbiome
 #SBATCH --output=Filter_Limnosat_May_Oct_Lagos_For_Temporal_%A.out
@@ -615,18 +616,17 @@ date
 ```
 
 
-Questions
-- Do we have lagos data without landcover data? or do all lagos lakes have landcover data?
-I'm thinking here that we may not have as many lakes match to lagos data if we merged the lagos data with landcover data and only kept the ones that matched (ask Linnea)
-
-
-
 ## d. move these files into the main data folder for people to use
 ```{bash}
 mv 2023-10-18_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData ..
 chmod a-w 2023-10-18_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData
-mv 2023-10-18_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData ..
-chmod a-w
+mv 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData ..
+chmod a-w 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData
 ```
+
+
+Questions
+- Do we have lagos data without landcover data? or do all lagos lakes have landcover data?
+I'm thinking here that we may not have as many lakes match to lagos data if we merged the lagos data with landcover data and only kept the ones that matched (ask Linnea)
 
 
