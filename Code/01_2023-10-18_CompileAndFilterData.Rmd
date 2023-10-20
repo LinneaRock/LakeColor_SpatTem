@@ -11,7 +11,7 @@ Request resources, move to directory, and load modules for R
 ssh jvonegge@beartooth.arcc.uwyo.edu
 cd /project/lakecolor/data/archive
 
-salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=5:00:00
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=1:00:00
 
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.2.2
@@ -466,7 +466,7 @@ nrow(limnosat_may_oct_lagos_landcover)
 # How many lakes in limnosat have landcover data?
 table(unique(limnosat_may_oct_lagos$lake_nhdid)%in%unique(landcover$lake_nhdid))
 #   TRUE 
-# 145083 # all limnosat observations have landcover data
+# 145083 # all limnosat lakes have landcover data
 
 # How many limnosat observations have landcover observations for the same year? 
 table(unique(paste(limnosat_may_oct_lagos$lake_nhdid, limnosat_may_oct_lagos$year, sep="@")) %in% unique(paste(landcover$lake_nhdid, landcover$year, sep="@")))
@@ -476,8 +476,10 @@ table(unique(paste(limnosat_may_oct_lagos$lake_nhdid, limnosat_may_oct_lagos$yea
 #[1] 0.2376156 %23 percent of limnosat observations have landcover data for the same year. 
 
 
-#remove all objects in evironment apart from the spatial dataframe!
-rm(list=setdiff(ls(), "limnosat_may_oct_lagos_landcover"))
+spatial<-limnosat_may_oct_lagos_landcover
+
+#remove all objects in environment apart from the spatial dataframe!
+rm(list=setdiff(ls(), "spatial"))
 
 save.image(paste0(Sys.Date(),"_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData"))
 
@@ -578,11 +580,15 @@ for(i in 1:length(unique(lake_year$lake_nhdid))){
 }
 save.image(paste0(Sys.Date(),"_TEMPORAL_Tempfile.RData"))
 
-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[setdiff(limnosat_may_oct_lagos_30yrs$lake_nhdid,lakes_rm),]
+limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[limnosat_may_oct_lagos_30yrs$lake_nhdid%in%setdiff(limnosat_may_oct_lagos_30yrs$lake_nhdid,lakes_rm),]
+
 
 #how many lakes?
 length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))
+#[1] 81035
+
 length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))/length(unique(limnosat_may_oct_lagos$lake_nhdid))
+#[1] 0.5585424
 
 #rename to something short and easy to work with
 temporal<-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr
