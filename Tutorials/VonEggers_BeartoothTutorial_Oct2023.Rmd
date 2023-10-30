@@ -1,0 +1,396 @@
+---
+title: "Beartooth Tutorial"
+author: "Jordan Von Eggers"
+date: "2023-09-20"
+output: html_document
+---
+
+Before starting:
+1) Markdown files
+2) Creaing bash vs R chunks
+3) Opening terminal in RStudio
+4) Opening multiple terminals in RStudio and switching between the two (arrows and the drop down)
+5) Sending to command line (for Mac - Option + Command + Return)
+6) If you are writing directly in the terminal command line, use enter to send commands through
+
+
+# 1. Logging into Beartooth
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+#Password and Duo Push
+#say 'Y' to fingerprint
+#when you put your password in it looks like you are not typing but you are
+# make sure you have your phone for Duo Authenication
+```
+- Here we see the Beartooth home screen that lets you know what projects you are signed up for. 
+- Note how much data the whole 'lakecolor' project has (1 t to be spread among all of us) and then check out your own home area (25g).
+- Your gscratch has 5t!!! So this is where we will do most of our analyses. Gscratches can be deleted by the supercomputer, but I've never seen this. Just to be safe, when you really like a file out output, you can save it back to the lakecolor folder, but when you are working on analyses, work in your gscratch!
+- Check out the office hours listed here! ARCC are super friendly and helpful and you can drop into their office hours if you are having problems - I met with them TWICE on this project already ;) 
+- the stop sign on the top right doesn't mean something is running, it just means your connected to the super computer.
+- drop downs on the Terminal tab will say (busy) if you are connected to the super computer. 
+
+# 2. Navigating your directories and file manipulation
+```{bash}
+cd /YOUR/FILE/PATH # change directory
+cd/project/lakecolor/ #will not work because you need space
+cd /project/lakecolor/
+cd .. # go backwards
+cd ../.. #go back two folders
+#unlike R, spaces mean something in Linux!
+
+# let's go to our project directory
+cd /project/lakecolor/
+# start with the backslash when you are moving projects or into your gscratch
+# here we have our folder with all the users with their own folders, a "data" folder, and a "users" folder.
+# let's check out our data folder!
+cd data
+# if you are going into a child folder you don't need to use the backslash
+
+# figure out where you are
+pwd 
+# you can also see the folder you are in next to your user name and what cluster you are on [jvonegge@blog2 data]$ 
+# in Rstudio, you will also see the file path at the top of the terminal window
+# 
+
+# using TAB to autofill
+# start typing a command (like cd) and hit tab to autofill or tab twice to show you all the options
+
+# like R, up arrows give you previous commands
+# type here in your R markdown because you are free to edit, and then send to command line
+
+# list files
+ls # list files
+ls -lh #lists files with more information (I think "human readable")
+wc -l # this lets you count the number of lines in a file, see we have about 63 million lines
+wc -l 2023-10-03_FullDataset_Limnosat_LAGOS.csv
+
+# here we have the protections on the folders.
+# Note that I've protected the shit out of these files so no one can delete them on accident!
+
+# move folders or files
+mv MYFOLDER DESTINATIONFOLDER # move folders
+mv MYFILE DESTINATIONFOLDER
+mv MYFILE PARENTFOLDER/CHILDFOLDER #go into two folders
+mv MYFILE ..
+mv MYFILE FULL/PATH/TO/NEW/DIRECTORY
+
+#example of moving files
+mv /gscratch/jvonegge/2023-10-03_FullDataset_Limnosat_LAGOS.csv /project/lakecolor/data
+
+# change names of files
+mv OLDFILENAME NEWFILENAME
+
+# copy files
+cp FILE DESTINATION/FOLDER
+cp FULL/PATH/AND/FILE DESTINATION/FOLDER
+
+cp 2023-10-03_FullDataset_Limnosat_LAGOS.csv /gscratch/jvonegge/
+
+# make new folders - make sure you are in the folder you want to make the new folder in
+mkdir NEWFOLDERNAME
+
+# remove files and folders (USE CAUTION!!!)
+rm FILENAME #remove an individual file
+rm -r FOLDERNAME # removes ALL files in the folder and the folder itself
+rmdir FOLDERNAME #removes a folder if its empty
+rm * #the * here represents a wildcard and will delete everything in fucking sight. So only use if you are SURE you want to delete everything in that folder (YOU CANNOT UNDO THESE DELETES!)
+rm *.csv #this would delete ANY file that ends in csv in the folder you are currently in
+```
+
+Task 1
+Move your folder name into users!
+```{bash}
+mv jvonegge ../users
+```
+
+# 3. Viewing files, creating files, editing files
+
+## a) Viewing files
+```{bash}
+# let's view the top and bottom of our main dataset
+cd /project/lakecolor/data
+head 2023-10-03_FullDataset_Limnosat_LAGOS.csv # look at the first few rows
+head -n 100 2023-10-03_FullDataset_Limnosat_LAGOS.csv # look at the top 100 rows
+tail -n 100 2023-10-03_FullDataset_Limnosat_LAGOS.csv # look at bottom 100 rows
+more 2023-10-03_FullDataset_Limnosat_LAGOS.csv
+# + return/enter to scroll
+q # to exit
+less 2023-10-03_FullDataset_Limnosat_LAGOS.csv
+q # to exit
+```
+
+to clear output of terminal but stay in same place!
+```{bash}
+clear
+```
+
+## b) Creating and edit files
+two main ways: 'nano' and 'vim'
+```{bash}
+nano NEWFILENAME.filetype
+nano jordan.txt
+#can type freely either bash or R code
+# 'control' + 'x' to exit
+Y # to save
+N # to discard 
+#'Return' to save the name you put in
+
+vim NEWFILENAME.filetype
+i # edit file (insert)
+esc # stop editing
+:w # save 
+:q # exit
+:q! #exit without saving
+```
+If you have small files, you can copy over from your markdown file, but I suggest if its a bigger Rscript file you copy it over from your computer. I think it gets glitchy when you copy huge amounts of information over and I've had jobs that don't run because something was left out when I copied over. 
+
+
+# 4. Using resources
+
+Whenever you want to do something in the supercomputer that takes computing effort, you will request resources in one of two ways: 
+a) running an interactive session and 
+2) submitting a "bash" job. 
+
+Everything we have done so far doesn't require much computing, so we can stay on the log in node.
+You can see this next to your user name [jvonegge@blog2 data]$ 
+
+
+## a) Running an interactive session in R
+Different computing offerings in terms of memory:
+https://arccwiki.atlassian.net/wiki/spaces/DOCUMENTAT/pages/377323550/Introduction+to+Job+Submission+01+Nodes+Tasks+and+Processors
+```{bash}
+salloc --mem=100GB --nodes=1 --cpus-per-task=1 --account=lakecolor --time=1:00:00
+```
+
+
+### i. Subset data in linux
+Here we are going to subset the dataframe in linux and save it into our gscratch folder to work on.
+If you go directly into R to subset, it takes forever for the CSV file to even read, so I suggest subsetting first and then working in R so your file is more manageable.
+
+For this example we will subset the data and look at 2018 data
+let's look at the top of the CSV file using our "less" command
+```{bash}
+cd /project/lakecolor/data
+head -n 1 2023-10-03_FullDataset_Limnosat_LAGOS.csv
+```
+
+
+Using chatGPT:
+"How can you find the unique values of the 4th column in a CSV file in linux?"
+```{bash}
+cut -d ',' -f 4 2023-10-03_FullDataset_Limnosat_LAGOS.csv | sort | uniq
+```
+1984
+1985
+1986
+1987
+1988
+1989
+1990
+1991
+1992
+1993
+1994
+1995
+1996
+1997
+1998
+1999
+2000
+2001
+2002
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+2017
+2018
+2019
+2020
+2021
+"year"
+
+Subset a "year" column for all rows with 2018 in the 4th column and keep the header
+```{bash}
+
+# one way
+{ head -n 1 2023-10-03_FullDataset_Limnosat_LAGOS.csv; awk -F ',' '$4 ~ /2018/' 2023-10-03_FullDataset_Limnosat_LAGOS.csv; } > /gscratch/jvonegge/2023-10-04_Limnosat_2018.csv
+
+# another way
+awk -F ',' 'NR==1 || $4=="2018"' 2023-10-03_FullDataset_Limnosat_LAGOS.csv > /gscratch/jvonegge/2023-10-04_Limnosat_2018.csv
+
+```
+Watch this in another terminal!
+
+Wait for the '[jvonegge@m219 data]$' comes up again, this indicates the action has finished!
+
+
+```{bash}
+cd /gscratch/jvonegge/
+ls
+mkdir LakeColor
+mv 2023-10-04_Limnosat_2018.csv LakeColor
+wc -l 2023-10-04_Limnosat_2018.csv #lets see how many lines this file is
+```
+
+Let's say you want to project this - lets ask ChatGPT how do do this:
+"How do I protect a file in Linux so it is read only for all users?"
+```{bash}
+# make write only (aka -w for all)
+chmod a-w 2023-10-04_Limnosat_2018.csv
+#you can still remove these files, but linux will ask if you want to delete it
+
+#nevermind, I want to be able to edit it
+chmod a+w 2023-10-04_Limnosat_2018.csv
+
+```
+
+
+### ii. Look at the modules you can load in linux/supercomputer
+```{bash}
+module spider
+module spider r
+```
+
+
+### iii. Start interactive R session
+```{bash}
+cd /gscratch/jvonegge/LakeColor
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+R
+```
+
+Just like in your computer, you can install packages and it will save them to your home folders on the super computer. 
+```{r}
+require(tidyverse)
+getwd()
+list.files()
+Y2018<-read.csv("2023-10-04_Limnosat_2018.csv", header=T,row.names=1)
+objects()
+
+pdf(paste0(Sys.Date(),"_Histogram_of_2018_colors.pdf"), height=5, width=7)
+hist(Y2018$dWL, xlab="dWL", ylab="Frequency", main="2018 dWL color at all sites")
+dev.off()
+
+summary<-summary(Y2018$dWL)
+rm(Y2018)
+save.image(paste0(Sys.Date(), "_2018_summary_dWL.RData"))
+```
+to exit R
+```{r}
+quit()
+n
+```
+
+
+## b) Copy files back to your computer
+```{bash}
+rsync 
+rysnc -r FOLDER # -r stands for recursive, so you can use this with folders so you copy everything in that folder
+```
+-If you have a filepath name with spaces, you won't be able to copy it to your computer and will probably have to use your desktop
+
+In a NEW terminal (not connected to Beartooth)
+```{bash}
+rsync jvonegge@beartooth.arcc.uwyo.edu:/gscratch/jvonegge/LakeColor/2023-10-04_Histogram_of_2018_colors.pdf /Users/jordanscheibe/Desktop
+
+rsync jvonegge@beartooth.arcc.uwyo.edu:/gscratch/jvonegge/2023-10-04_2018_summary_dWL.RData /Users/jordanscheibe/Desktop
+```
+
+## c) Submitting a bash job
+When submitting a bash job that runs an R script you will need two files: 
+1. an R script (preferrably copied over from your computer)
+2. a 'bash' file that runs your R script
+
+
+For bash jobs, save everything with the same name (sh file, job name, out file)
+
+
+
+uses nano below:
+2018_hist.R
+```{r}
+#load packages if needed
+Y2018<-read.csv("2023-10-04_Limnosat_2018.csv", header=T,row.names=1)
+
+pdf(paste0(Sys.Date(),"_Histogram_of_2018_colors.pdf"), height=5, width=7)
+hist(Y2018$dWL, xlab="dWL", ylab="Frequency", main="2018 dWL color at all sites")
+dev.off()
+
+summary<-summary(Y2018$dWL)
+rm(Y2018)
+save.image(paste0(Sys.Date(), "_2018_summary_dWL.RData"))
+```
+
+OR copy files TO Beartooth
+```{bash}
+rsync /Users/jordanscheibe/Desktop/2018_hist.R jvonegge@beartooth.arcc.uwyo.edu:/gscratch/jvonegge/LakeColor
+```
+
+
+run_2018_hist.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name 2018_hist
+#SBATCH --mem=20GB
+#SBATCH --time=20:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=lakecolor
+#SBATCH --output=2018_hist_%A.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=jvonegge@uwyo.edu
+
+cd /gscratch/jvonegge/LakeColor/
+date 
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+
+srun Rscript 2018_hist.R
+
+date
+```
+If you don't want to get emails, just remove the last to #SBATCH lines
+
+
+run your job and look at your out file
+```{bash}
+sbatch run_2018_hist.sh
+more INSERTJOB
+```
+
+
+
+## d) Check status of your jobs
+```{bash}
+squeue -u jvonegge # see what resources you are using
+scancel JOBID # cancel a specific job by using its number
+scancel -u jvonegge # cancel all jobs
+seff JOBID # check out how much memory and time you used to adjust future jobs or see if you reached maximum memory.
+
+```
+
+
+Additional resources: 
+- Clusters available on Beartooth: https://arccwiki.atlassian.net/wiki/spaces/DOCUMENTAT/pages/377323550/Introduction+to+Job+Submission+01+Nodes+Tasks+and+Processors
+- ARCC Training: Introduction to High Performance Computing https://uwittraining.catalog.instructure.com/courses/introhpc
+- An interface to view your files on Beartooth and other things https://southpass.arcc.uwyo.edu
+
+
+
+Additional things I can help go over later if needed:
+- Setting up passwordless authentication
+- Looping files directly in Linux
+- Troubleshooting bash files
+- Conda environments in Linux
