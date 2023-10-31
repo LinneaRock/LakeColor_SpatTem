@@ -6,6 +6,122 @@ output: html_document
 ---
 
 
+
+# 0. Set up on Beartooth 
+Request resources, move to directory, and load modules for R
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+cd /project/lakecolor/data/
+
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+R
+```
+
+# 1. Histogram of temporal lake size
+```{r}
+load("2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData")
+
+
+pdf(paste0(Sys.Date(),"_TEMPORAL_HistogramLakeSize.pdf"), height=8,width=7)
+hist(temporal$lake_waterarea_ha, xlim=c(0,1000),breaks=100000)
+dev.off()
+
+
+uniq_lakes <-temporal[,names(temporal)%in%c("lake_nhdid","lake_waterarea_ha")]
+uniq_lakes<-unique(uniq_lakes)
+
+uniq_lakes_small<-uniq_lakes[uniq_lakes$lake_waterarea_ha<11,]
+
+
+pdf(paste0("/gscratch/jvonegge/LakeColor/",Sys.Date(),"_TEMPORAL_HistogramLakeSize_SmallLakes.pdf"), height=8,width=7)
+hist(uniq_lakes_small$lake_waterarea_ha,ylab="Freq", xlab="Lake size (hectares)", main="Histogram of temporal dataset lakes < 11 ha")
+dev.off()
+
+
+uniq_lakes_med<-uniq_lakes[uniq_lakes$lake_waterarea_ha<100,]
+
+pdf(paste0("/gscratch/jvonegge/LakeColor/",Sys.Date(),"_TEMPORAL_HistogramLakeSize_LakesLessThan100ha.pdf"), height=8,width=7)
+hist(uniq_lakes_med$lake_waterarea_ha, ylab="Freq", xlab="Lake size (hectares)", main="Histogram of temporal dataset lakes < 100 ha")
+dev.off()
+
+rm(list=setdiff(ls(), "temporal"))
+
+```
+
+# 2. run linear models for temporal dataset
+```{r}
+load("../data/2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData")
+
+sub_temporal_yravgdWL<-data.frame()
+temporal_yravgdWL<-data.frame()
+
+lm_model_results<-data.frame(lake_nhdid=character(), lm_yint=numeric(), lm_pval=numeric(), lm_rsq=numeric(),lm_slope=numeric(), resid_yint=numeric(), resid_pval=numeric(), resid_rsq=numeric(),resid_slope=numeric())
+
+
+i=1
+j=1
+for(i in 1:length(unique(temporal$lake_nhdid))){
+        sub<-temporal[temporal$lake_nhdid==unique(temporal$lake_nhdid)[i],]
+        for(j in 1:length(unique(sub$year))){
+                sub2<-sub[sub$year==unique(sub$year)[j],]
+                sub2[1,]$dWL<-mean(sub2$dWL)
+                sub_temporal_yravgdWL<-rbind(sub_temporal_yravgdWL,sub2[1,])
+        }
+        
+        temp_lm<-lm(sub_temporal_yravgdWL$dWL~sub_temporal_yravgdWL$year)
+        sub_temporal_yravgdWL$residuals<-abs(temp_lm$residuals)
+        resid_lm<-lm(sub_temporal_yravgdWL$residuals~sub_temporal_yravgdWL$year)
+        
+        lm_model_results<- rbind(lm_model_results,data.frame(lake_nhdid=unique(temporal$lake_nhdid)[i], lm_yint=summary(temp_lm)$coefficients[1,1], lm_pval=summary(temp_lm)$coefficients[2,4], lm_rsq=summary(temp_lm)$r.squared, lm_slope=summary(temp_lm)$coefficients[2,1], resid_yint=summary(resid_lm)$coefficients[1,1], resid_pval=summary(resid_lm)$coefficients[2,4], resid_rsq=summary(resid_lm)$r.squared,resid_slope=summary(resid_lm)$coefficients[2,1]))
+        
+        temporal_yravgdWL<-rbind(temporal_yravgdWL,sub_temporal_yravgdWL)
+        rm(sub_temporal_yravgdWL)
+        sub_temporal_yravgdWL<-data.frame()
+        print(i)
+}
+
+
+rm(list=setdiff(ls(), "lm_model_results","temporal_yravgdWL"))
+save.image(paste0(Sys.Date(),"TEMPORAL_LinearModelOutput.Rdata"))
+
+```
+
+
+run_2023-10-30_TEMPORAL_LinearModel.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name temporal_lms
+#SBATCH --mem=100GB
+#SBATCH --time=24:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=microbiome
+#SBATCH --output=temporal_lms_%A.out
+
+cd /project/lakecolor/data_analysis
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+
+srun Rscript 2023-10-30_TEMPORAL_LinearModel.R
+date
+
+```
+
+
+Question - what types of lakes were removed with the temporal dataset?
+
+
+
+##### OLD BELOW
+
+
+
+
+
+
+
 #Data exploration
 
 ```{r}
