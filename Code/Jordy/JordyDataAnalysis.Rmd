@@ -5,8 +5,6 @@ date: "2023-10-18"
 output: html_document
 ---
 
-
-
 # 0. Set up on Beartooth 
 Request resources, move to directory, and load modules for R
 ```{bash}
@@ -83,10 +81,8 @@ for(i in 1:length(unique(temporal$lake_nhdid))){
         print(i)
 }
 
-
 rm(list=setdiff(ls(), "lm_model_results","temporal_yravgdWL"))
 save.image(paste0(Sys.Date(),"TEMPORAL_LinearModelOutput.Rdata"))
-
 ```
 
 
@@ -95,7 +91,7 @@ run_2023-10-30_TEMPORAL_LinearModel.sh
 #!/bin/bash
 #SBATCH --job-name temporal_lms
 #SBATCH --mem=100GB
-#SBATCH --time=24:00:00
+#SBATCH --time=36:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --account=microbiome
 #SBATCH --output=temporal_lms_%A.out
@@ -104,13 +100,144 @@ cd /project/lakecolor/data_analysis
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.2.2
 
-srun Rscript 2023-10-30_TEMPORAL_LinearModel.R
+srun Rscript 2023-10-30_TEMPORAL_LinearModel_1.R
 date
+```
 
+
+```{bash}
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_1.sh 
+Submitted batch job 10479727
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_2.sh 
+Submitted batch job 10479728
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_3.sh 
+Submitted batch job 10479729
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_4.sh 
+Submitted batch job 10479730
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_5.sh 
+Submitted batch job 10479731
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_6.sh 
+Submitted batch job 10479732
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_7.sh 
+Submitted batch job 10479733
+[jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_8.sh 
+Submitted batch job 10479734
 ```
 
 
 Question - what types of lakes were removed with the temporal dataset?
+
+# 3. subset and average climate data
+
+initial exploration
+```{r}
+climate<-readRDS("climate_data.RDS")
+load("2023-10-19_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData")
+
+names(spatial)
+names(climate)
+
+table(unique(spatial$hu12_zoneid) %in%unique(climate$hu12_zoneid))
+table(unique(climate$hu12_zoneid) %in%unique(spatial$hu12_zoneid))
+
+#subset climate data by the hu12_zoneids we have in the spatial dataframe
+nrow(climate)
+48867504
+climate<-climate[climate$hu12_zoneid %in%unique(spatial$hu12_zoneid),]
+nrow(climate)
+19236420/48867504
+#[1] 0.3936444 #climate data shrunk when we only kept lakes with the hu12_zoneids we wanted, 40% of the total climate data
+
+#How many unique hu12_zoneids?
+length(unique(climate$hu12_zoneid))
+#32715
+
+#subset climate data by the years we have in limnosat
+
+range(spatial$year)
+#[1] 1984 2021
+range(climate$climate_year)
+#[1] 1970 2018
+
+```
+
+to test on my local drive, grab a subset of the climate data and download
+```{r}
+#on supercomputer
+climate<-readRDS("climate_data.RDS")
+climate_2<-rbind(climate[climate$hu12_zoneid==unique(climate$hu12_zoneid)[1],], climate[climate$hu12_zoneid==unique(climate$hu12_zoneid)[2],])
+unique(climate_2$hu12_zoneid)
+write.csv(climate_2,"/gscratch/jvonegge/LakeColor/TinySubsetClimateData.csv")
+
+#in local computer
+climate<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/TinySubsetClimateData.csv",header=T,row.names=1)
+
+#subset climate data by the years we have in limnosat
+climate<-climate[climate$climate_year %in% seq(1984,2021,1),]
+
+```
+
+
+
+
+2023-11-1_subset_average_ClimateData.R
+```{r}
+require(tidyverse)
+#read in data files, using spatial because more complete sites (TEMPORAL is subset)
+climate<-readRDS("../climate_data.RDS")
+load("../2023-10-19_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData")
+
+#subset climate data by the hu12_zoneids we have in the spatial dataframe
+climate<-climate[climate$hu12_zoneid %in% unique(spatial$hu12_zoneid),]
+
+#subset climate data by the years we have in limnosat
+climate<-climate[climate$climate_year %in% unique(spatial$years),]
+
+#order dataframe so that the final file is in order of hu12_zoneid and years
+climate<-climate %>%
+        arrange(hu12_zoneid,climate_year,climate_month)
+
+# average climate data by MAAT and cumulative precipitation, also record the total number of months of observations
+
+#create empty data frame with final, averaged dataset and column names that will match the limnosat dataframe (climate_year --> year)
+climate_YrAvg<-data.frame(hu12_zoneid=character(), year=numeric(), yr_tmean_degc=numeric(), yr_cumu_ppt_mm=numeric(), num_months=numeric(), perc_datacovperc_less100=numeric()) #
+
+i=1
+j=1
+for(i in 1:length(unique(climate$hu12_zoneid))){
+        sub<-climate[climate$hu12_zoneid==unique(climate$hu12_zoneid)[i],]
+        for(j in 1:length(unique(sub$climate_year))){
+                sub2<-sub[sub$climate_year==(unique(sub$climate_year))[j],]
+                climate_YrAvg<-rbind(climate_YrAvg, data.frame(hu12_zoneid=sub2$hu12_zoneid[1], year=sub2$climate_year[1], yr_tmean_degc=mean(sub2$climate_tmean_degc), yr_cumu_ppt_mm=sum(sub2$climate_ppt_mm), num_months=length(unique(sub2$climate_month)), perc_datacovperc_less100=1-(length(which(sub2==100))/nrow(sub2))))
+        }
+        print[i]
+        }
+
+
+climate<-climate_YrAvg #overwrite starting climate dataframe
+
+rm(list=setdiff(ls(), "climate"))
+save.image(paste0(Sys.Date(),"_ClimateData_Temp_Precip_YrAvg.Rdata"))
+```
+
+
+run_2023-11-1_subset_average_ClimateData.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name climate_avg
+#SBATCH --mem=100GB
+#SBATCH --time=4-00:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=microbiome
+#SBATCH --output=climate_avg_%A.out
+
+cd /project/lakecolor/data/archive
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+
+srun Rscript 2023-11-1_subset_average_ClimateData.R
+date
+```
 
 
 
