@@ -6,9 +6,9 @@ temporal_yravgdWL<-data.frame()
 lm_model_results<-data.frame(lake_nhdid=character(), lm_yint=numeric(), lm_pval=numeric(), lm_rsq=numeric(),lm_slope=numeric(), resid_yint=numeric(), resid_pval=numeric(), resid_rsq=numeric(),resid_slope=numeric())
 
 
-i=1
+i=40001
 j=1
-for(i in 1:length(unique(temporal$lake_nhdid))){
+for(i in 40001:50000){
         sub<-temporal[temporal$lake_nhdid==unique(temporal$lake_nhdid)[i],]
         for(j in 1:length(unique(sub$year))){
                 sub2<-sub[sub$year==unique(sub$year)[j],]
@@ -30,4 +30,4 @@ for(i in 1:length(unique(temporal$lake_nhdid))){
 
 
 rm(list=setdiff(ls(), "lm_model_results","temporal_yravgdWL"))
-save.image(paste0(Sys.Date(),"TEMPORAL_LinearModelOutput.Rdata"))
+save.image(paste0(Sys.Date(),"TEMPORAL_LinearModelOutput_5.Rdata"))
