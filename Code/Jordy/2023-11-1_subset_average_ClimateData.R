@@ -7,7 +7,7 @@ load("../2023-10-19_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData")
 climate<-climate[climate$hu12_zoneid %in% unique(spatial$hu12_zoneid),]
 
 #subset climate data by the years we have in limnosat
-climate<-climate[climate$climate_year %in% unique(spatial$years),]
+climate<-climate[climate$climate_year %in% unique(spatial$year),]
 
 #order dataframe so that the final file is in order of hu12_zoneid and years
 climate<-climate %>%
@@ -26,11 +26,11 @@ for(i in 1:length(unique(climate$hu12_zoneid))){
                 sub2<-sub[sub$climate_year==(unique(sub$climate_year))[j],]
                 climate_YrAvg<-rbind(climate_YrAvg, data.frame(hu12_zoneid=sub2$hu12_zoneid[1], year=sub2$climate_year[1], yr_tmean_degc=mean(sub2$climate_tmean_degc), yr_cumu_ppt_mm=sum(sub2$climate_ppt_mm), num_months=length(unique(sub2$climate_month)), perc_datacovperc_less100=1-(length(which(sub2==100))/nrow(sub2))))
         }
-        print[i]
+        print(i)
 }
 
 
 climate<-climate_YrAvg #overwrite starting climate dataframe
 
 rm(list=setdiff(ls(), "climate"))
-save.image(paste0(Sys.Date(),"_ClimateData_Temp_Precip_YrAvg.Rdata"))
+save.image(paste0("../",Sys.Date(),"_ClimateData_Temp_Precip_YrAvg.Rdata"))
