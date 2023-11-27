@@ -3,6 +3,8 @@ title: "Jordy_Data_Analysis"
 author: "Jordan Von Eggers"
 date: "2023-10-18"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # 0. Set up on Beartooth 
@@ -17,6 +19,21 @@ module load arcc/1.0  gcc/12.2.0
 module load r/4.2.2
 R
 ```
+
+```{r}
+require(tidyverse)
+#color for manually created legend
+bg.fui = tibble(
+  ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+  ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+  color = c(
+  "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+  "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+  "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04")
+)
+```
+
+
 
 # 1. Histogram of temporal lake size
 ```{r}
@@ -106,23 +123,558 @@ date
 
 
 ```{bash}
+
+
+
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_1.sh 
-Submitted batch job 10479727
+Submitted batch job 11254813
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_2.sh 
-Submitted batch job 10479728
+Submitted batch job 11254817
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_3.sh 
-Submitted batch job 10479729
+Submitted batch job 11254820
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_4.sh 
-Submitted batch job 10479730
+Submitted batch job 11254824
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_5.sh 
-Submitted batch job 10479731
+Submitted batch job 11254827
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_6.sh 
-Submitted batch job 10479732
+Submitted batch job 11254830
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_7.sh 
-Submitted batch job 10479733
+Submitted batch job 11254834
 [jvonegge@blog2 data_analysis]$ sbatch run_2023-10-30_TEMPORAL_LinearModel_8.sh 
-Submitted batch job 10479734
+
+tail temporal_lms_11254813.out
+tail temporal_lms_11254817.out
+tail temporal_lms_11254820.out
+tail temporal_lms_11254824.out
+tail temporal_lms_11254827.out
+tail temporal_lms_11254830.out
+tail temporal_lms_11254834.out
+tail temporal_lms_11254837.out
+
 ```
+
+bind all temporal datasets together
+```{r}
+compiled_lm_model_results<-NULL
+compiled_temporal_yravgdWL<-NULL
+load("2023-11-08TEMPORAL_LinearModelOutput_1.Rdata")
+compiled_lm_model_results<-lm_model_results
+compiled_temporal_yravgdWL<-temporal_yravgdWL
+load("2023-11-08TEMPORAL_LinearModelOutput_2.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-08TEMPORAL_LinearModelOutput_3.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-08TEMPORAL_LinearModelOutput_4.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-08TEMPORAL_LinearModelOutput_5.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-08TEMPORAL_LinearModelOutput_6.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-08TEMPORAL_LinearModelOutput_7.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+load("2023-11-09TEMPORAL_LinearModelOutput_8.Rdata")
+compiled_lm_model_results<-rbind(compiled_lm_model_results, lm_model_results)
+compiled_temporal_yravgdWL<-rbind(compiled_temporal_yravgdWL,temporal_yravgdWL)
+
+length(unique(compiled_lm_model_results$lake_nhdid))
+#[1] 81035
+length(unique(compiled_temporal_yravgdWL$lake_nhdid))
+#[1] 81035
+
+#here I need to remove brightness, normalized_green and Nir because they were NOT averaged to make the datafame
+compiled_temporal_yravgdWL$brightness<-NULL
+compiled_temporal_yravgdWL$normalized_green<-NULL
+compiled_temporal_yravgdWL$Nir<-NULL
+
+#rename the rownames for the compiled dataset
+rownames(compiled_temporal_yravgdWL)<-seq(1,nrow(compiled_temporal_yravgdWL),1) 
+
+write.csv(compiled_temporal_yravgdWL,paste0("../",Sys.Date(),"_TEMPORAL_yearly_averaged_dWL.csv"))
+write.csv(compiled_lm_model_results,paste0(Sys.Date(),"_TEMPORAL_linear_model_results.csv"))
+
+```
+
+add in LAGOS data
+
+```{bash}
+cd /project/lakecolor/data_analysis/TEMPORAL_LinearModels
+R
+```
+
+```{r}
+require(tidyverse)
+lm_res<-read.csv("2023-11-09_TEMPORAL_linear_model_results.csv", header=T, row.names=1)
+nrow(lm_res)
+lake_data<-readRDS("/project/lakecolor/data/archive/2023-09-29_lagos_landcover_data.rds") #this is the lake data and landcover - need to remove land cover 
+
+# merge with Lagos data (should be static for each lake)
+# first take out the landcover data that was attached
+lagos<-lake_data[,1:15]
+lagos<-distinct(lagos)
+nrow(lagos)
+#479950
+
+table(unique(lm_res$lake_nhdid)%in%unique(lagos$lake_nhdid))
+#  TRUE 
+# 81035
+ 
+#merge the lm_res dataset with the filtered lagos dataset
+lm_res_lagos<-inner_join(lm_res,lagos)
+#Joining with `by = join_by(lake_nhdid)`
+
+nrow(lm_res_lagos)
+#[1] 81035
+
+write.csv(lm_res_lagos, paste0(Sys.Date(), "_TEMPORAL_linear_model_results_lagos.csv"))
+
+```
+
+## a. explore lm results
+copy to local drive
+```{r}
+lm_res<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2023-11-09_TEMPORAL_linear_model_results_lagos.csv", header = T, row.names=1)
+
+require(ggplot2)
+
+# Get state borders
+states <- map_data("state")
+
+cols <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+   "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#FDBF6F", # lt orange
+  "maroon", "orchid1","black", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","gray","khaki2","#CAB2D6"
+)
+
+lm_res$ecoregion_color <- cols[as.factor(lm_res$epanutr_zoneid )]
+
+wmap<-ggplot(data = lm_res) + 
+        geom_point(data = lm_res, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = lm_res$ecoregion_color, size = 1) +  # Add points
+        scale_fill_distiller( palette="Spectral", direction=1)+
+        theme_void()+
+       coord_fixed(1.3) +
+        geom_polygon(data= states, aes(x = long, y = lat, group = group), fill="transparent",color = "black", linewidth=0.5)
+pdf(paste0("../",Sys.Date(),"_Temporal_EcoRegionsMap.pdf"),height=4,width=6)
+wmap
+dev.off()
+```
+
+```{r}
+lm_res<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2023-11-09_TEMPORAL_linear_model_results_lagos.csv", header = T, row.names=1)
+
+cols <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+   "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#FDBF6F", # lt orange
+  "maroon", "orchid1","black", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","gray","khaki2","#CAB2D6"
+)
+
+lm_res$ecoregion_color <- cols[as.factor(lm_res$epanutr_zoneid )]
+
+
+lm_res$lake_size_cat<-rep(NA, nrow(lm_res))
+lm_res[lm_res$lake_waterarea_ha>=10,]$lake_size_cat<-"large"
+lm_res[lm_res$lake_waterarea_ha<10,]$lake_size_cat<-"small"
+large<-lm_res[lm_res$lake_size_cat=="large",]
+small<-lm_res[lm_res$lake_size_cat=="small",]
+
+
+
+#two lines for size
+x=seq(1984,2021,1)
+pdf(paste0("../",Sys.Date(),"_TemporalTrends_SmallLarge.pdf"),height=4,width=6)
+par(mar=c(4,4,2,6))
+        plot(x,y=seq(400,600,length.out=length(x)), col="white", ylab="Forel-Ule color (dwl)", xlab="Years (Common Era)", ylim=c(570,500))
+
+i=1
+for(i in 1:length(unique(large$epanutr_zoneid))){
+        sub<-large[large$epanutr_zoneid==unique(large$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lwd=5 )
+}
+
+i=1
+for(i in 1:length(unique(small$epanutr_zoneid))){
+        sub<-small[small$epanutr_zoneid==unique(small$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lty=2,lwd=5 )
+}
+dev.off()
+```
+
+#assign color values
+
+```{bash}
+rsync jvonegge@beartooth.arcc.uwyo.edu:/project/lakecolor/data_analysis/2023-11-09_TEMPORAL_yearly_averaged_dWL.csv /Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor
+```
+
+1. round values in dataset
+2. merge values
+```{r}
+YrAvg<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2023-11-09_TEMPORAL_yearly_averaged_dWL.csv", header=T)
+
+require(tidyverse)
+#color for manually created legend
+bg.fui = tibble(
+  ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+  ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+  color = c(
+  "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+  "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+  "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04")
+)
+
+
+site_cols <- YrAvg %>%
+  mutate(dWL = round(dWL,0)) 
+
+bg.fui<-as.data.frame(bg.fui)
+
+YrAvg <- YrAvg %>% mutate(col_hex = case_when(dWL <= bg.fui[1,1] & dWL <bg.fui[1,2] ~bg.fui[1,3],          dWL <=bg.fui[2,1] & dWL <bg.fui[2,2] ~bg.fui[2,3], 
+         dWL <=bg.fui[3,1] & dWL <bg.fui[3,2] ~bg.fui[3,3]   , 
+         dWL <=bg.fui[4,1] & dWL <bg.fui[4,2] ~bg.fui[4,3]   , 
+         dWL <=bg.fui[5,1] & dWL <bg.fui[5,2] ~bg.fui[5,3]   , 
+         dWL <=bg.fui[6,1] & dWL <bg.fui[6,2] ~bg.fui[6,3]   , 
+         dWL <=bg.fui[7,1] & dWL <bg.fui[7,2] ~bg.fui[7,3]   , 
+         dWL <=bg.fui[8,1] & dWL <bg.fui[8,2] ~bg.fui[8,3]   , 
+         dWL <=bg.fui[9,1] & dWL <bg.fui[9,2] ~bg.fui[9,3]   , 
+         dWL <=bg.fui[10,1] & dWL <bg.fui[10,2] ~bg.fui[10,3]   , 
+         dWL <=bg.fui[11,1] & dWL <bg.fui[11,2] ~bg.fui[11,3]   , 
+         dWL <=bg.fui[12,1] & dWL <bg.fui[12,2] ~bg.fui[12,3]   , 
+         dWL <=bg.fui[13,1] & dWL <bg.fui[13,2] ~bg.fui[13,3]   , 
+         dWL <=bg.fui[14,1] & dWL <bg.fui[14,2] ~bg.fui[14,3]   , 
+         dWL <=bg.fui[15,1] & dWL <bg.fui[15,2] ~bg.fui[15,3]   , 
+         dWL <=bg.fui[16,1] & dWL <bg.fui[16,2] ~bg.fui[16,3]   , 
+         dWL <=bg.fui[17,1] & dWL <bg.fui[17,2] ~bg.fui[17,3]   , 
+         dWL <=bg.fui[18,1] & dWL <bg.fui[18,2] ~bg.fui[18,3]   , 
+         dWL <=bg.fui[19,1] & dWL <bg.fui[19,2] ~bg.fui[19,3]   , 
+         dWL <=bg.fui[20,1] & dWL <bg.fui[20,2] ~bg.fui[20,3]   , 
+         dWL <=bg.fui[21,1] & dWL <bg.fui[21,2] ~bg.fui[21,3] , T~"black")) 
+  
+        
+if        
+        
+        
+        
+        
+        
+        
+        mutate(col_hex = case_when(dWL <=475 & dWL <480 )~"#316dc5"  %>% 
+        mutate(col_hex = case_when(dWL <=480 & dWL <485 )~"#327cbb"  %>% 
+        mutate(col_hex = case_when(dWL <=485 & dWL <489 )~"#4b80a0"  %>% 
+        mutate(col_hex = case_when(dWL <=489 & dWL <495 )~"#568f96"  %>% 
+        mutate(col_hex = case_when(dWL <=509 & dWL <530 )~"#698c86"  %>% 
+        mutate(col_hex = case_when(dWL <=495 & dWL <509 )~"#6d9298"  %>% 
+        530
+549
+#759e72
+        mutate(col_hex = case_when(dWL <= & dWL <475 )~"#2158bc"  %>% 
+        mutate(col_hex = case_when(dWL <=470 & dWL <475 )~"#2158bc"  %>% 
+        mutate(col_hex = case_when(dWL <=470 & dWL <475 )~"#2158bc"  %>% 
+        mutate(col_hex = case_when(dWL <=470 & dWL <475 )~"#2158bc"  %>% 
+    
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# make map of western states
+```{r}
+lm_res<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2023-11-09_TEMPORAL_linear_model_results_lagos.csv", header = T, row.names=1)
+states <- map_data("state")
+west <- subset(states, region %in% c("washington", "oregon", "california", "nevada", "idaho", "montana", "wyoming", "colorado", "arizona", "new mexico"))
+
+
+cols<-c(cols<-c("#43b284","#fab255","darkgray", "#0f7ba2" ,  "#dd5129"  ))
+
+lm_res<-lm_res[lm_res$lake_lon_decdeg<= (-102.05),]
+lm_res$ecoregion_color <- cols[as.factor(lm_res$epanutr_zoneid )]
+lm_res$lake_size_cat<-rep(NA, nrow(lm_res))
+lm_res[lm_res$lake_waterarea_ha>=10,]$lake_size_cat<-"large"
+lm_res[lm_res$lake_waterarea_ha<10,]$lake_size_cat<-"small"
+
+unique(lm_res[,names(lm_res)%in%c("epanutr_zoneid","ecoregion_color")])
+
+
+      epanutr_zoneid ecoregion_color
+29         epanutr_9        "#dd5129"
+282        epanutr_8        "#0f7ba2"
+545        epanutr_3        "#43b284"
+5637       epanutr_5         "#fab255"
+29547      epanutr_6        "darkgray"
+wmap<-ggplot(data = lm_res) + 
+        geom_point(data = lm_res, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = lm_res$ecoregion_color, size = 1) +  # Add points
+        scale_fill_distiller( palette="Spectral", direction=1)+
+        theme_void()+
+       coord_fixed(1.3) +
+        geom_polygon(data= west, aes(x = long, y = lat, group = group), fill="transparent",color = "black", size=0.5)
+wmap
+
+west<-lm_res[lm_res$epanutr_zoneid!="epanutr_6",]
+large<-west[west$lake_size_cat=="large",]
+small<-west[west$lake_size_cat=="small",]
+
+x=seq(1984,2021,1)
+
+pdf("../LakeColorWest.pdf",height=4,width=5)
+par(mar=c(4,4,2,1))
+        plot(x,y=seq(400,600,length.out=length(x)), col="white", ylab="Forel-Ule color (dwl)", xlab="Years (Common Era)", ylim=c(515,560))
+
+i=1
+for(i in 1:length(unique(west$epanutr_zoneid))){
+        sub<-west[west$epanutr_zoneid==unique(west$epanutr_zoneid)[i],]
+y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+lines(x,y,type="l", col=unique(sub$ecoregion_color), lwd=5 )
+}
+dev.off()
+
+
+#two lines for size
+x=seq(1984,2021,1)
+pdf("../LakeColorWest_size.pdf",height=4,width=5)
+par(mar=c(4,4,2,1))
+        plot(x,y=seq(400,600,length.out=length(x)), col="white", ylab="Forel-Ule color (dwl)", xlab="Years (Common Era)", ylim=c(510,560))
+
+i=1
+for(i in 1:length(unique(large$epanutr_zoneid))){
+        sub<-large[large$epanutr_zoneid==unique(large$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lwd=5 )
+}
+
+i=1
+for(i in 1:length(unique(small$epanutr_zoneid))){
+        sub<-small[small$epanutr_zoneid==unique(small$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lty=2,lwd=5 )
+}
+dev.off()
+
+
+
+
+
+#two lines for size
+x=seq(1984,2021,1)
+pdf("../LakeColorWest_size_rev.pdf",height=4,width=5)
+par(mar=c(4,4,2,1))
+        plot(x,y=seq(400,600,length.out=length(x)), col="white", ylab="Forel-Ule color (dwl)", xlab="Years (Common Era)", ylim=c(560,510), xlim=c(2021,1984))
+
+i=1
+for(i in 1:length(unique(large$epanutr_zoneid))){
+        sub<-large[large$epanutr_zoneid==unique(large$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lwd=5 )
+}
+
+i=1
+for(i in 1:length(unique(small$epanutr_zoneid))){
+        sub<-small[small$epanutr_zoneid==unique(small$epanutr_zoneid)[i],]
+        y=mean(sub$lm_yint)+(mean(sub$lm_slope)*x)
+        lines(x,y,type="l", col=unique(sub$ecoregion_color), lty=2,lwd=5 )
+}
+dev.off()
+plot.new()
+legend("center",legend=c("large","small"), lty=c(1,2), lwd=3, title="Lake size", bty="n")
+
+```
+
+
+
+
+
+# Figuring out why no TX and GA
+
+```{r}
+require(tidyverse)
+require(ggplot2)
+lake_data<-readRDS("2023-09-29_lagos_landcover_data.rds") #this is the lake data and landcover - need to remove land cover 
+
+# merge with Lagos data (should be static for each lake)
+# first take out the landcover data that was attached
+lagos<-lake_data[,1:15]
+lagos<-distinct(lagos)
+nrow(lagos)
+#479950
+
+write.csv(lagos,"LAGOSONLYDATA_TEST.csv")
+
+
+lagos<-read.csv("../LAGOSONLYDATA_TEST.csv")
+
+
+require(ggplot2)
+
+# Get state borders
+states <- map_data("state")
+
+cols <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+  "black", "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#FDBF6F", # lt orange
+  "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","gray","khaki2","#CAB2D6"
+)
+
+lagos$ecoregion_color <- cols[as.factor(lagos$epanutr_zoneid )]
+
+wmap<-ggplot(data = lagos) + 
+        geom_point(data = lagos, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = lagos$ecoregion_color, size = 1) +  # Add points
+        scale_fill_distiller( palette="Spectral", direction=1)+
+        theme_void()+
+       coord_fixed(1.3) +
+        geom_polygon(data= states, aes(x = long, y = lat, group = group), fill="transparent",color = "black", size=0.5)
+wmap
+
+
+
+
+
+require(tidyverse)
+require(ggplot2)
+load("2023-10-19_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData")
+
+spatial<-spatial[,names(spatial)%in% c("epanutr_zoneid","lake_lon_decdeg","lake_lat_decdeg")]
+spatial<-distinct(spatial)
+
+# Get state borders
+states <- map_data("state")
+
+cols <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+   "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#FDBF6F", # lt orange
+  "maroon", "orchid1", "black","deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","gray","khaki2","#CAB2D6"
+)
+
+spatial$ecoregion_color <- cols[as.factor(spatial$epanutr_zoneid )]
+
+wmap<-ggplot(data = spatial) + 
+        geom_point(data = spatial, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = spatial$ecoregion_color, size = 1) +  # Add points
+        scale_fill_distiller( palette="Spectral", direction=1)+
+        theme_void()+
+       coord_fixed(1.3) +
+        geom_polygon(data= states, aes(x = long, y = lat, group = group), fill="transparent",color = "black", size=0.5)
+
+pdf(paste0(Sys.Date(),"_SPAITAL_sitesByEcoregion.pdf"),height=4, width=6)
+           wmap
+           dev.off()
+           
+
+           
+           
+           
+#look at the initial dataframe used to make             
+load("archive/2023-10-18_Limnosat_May_Oct_Lagos.RData")
+objects()
+spatial<-limnosat_may_oct_lagos
+spatial<-spatial[,names(spatial)%in% c("epanutr_zoneid","lake_lon_decdeg","lake_lat_decdeg")]
+spatial<-distinct(spatial)
+
+# Get state borders
+states <- map_data("state")
+
+cols <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+   "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#FDBF6F", # lt orange
+  "maroon", "orchid1", "black","deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown","gray","khaki2","#CAB2D6"
+)
+
+spatial$ecoregion_color <- cols[as.factor(spatial$epanutr_zoneid )]
+
+wmap<-ggplot(data = spatial) + 
+        geom_point(data = spatial, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = spatial$ecoregion_color, size = 1) +  # Add points
+        scale_fill_distiller( palette="Spectral", direction=1)+
+        theme_void()+
+       coord_fixed(1.3) +
+        geom_polygon(data= states, aes(x = long, y = lat, group = group), fill="transparent",color = "black", size=0.5)
+
+pdf(paste0(Sys.Date(),"_Limnosat_May_Oct_Lagos_sitesByEcoregion.pdf"),height=4, width=6)
+           wmap
+           dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Question - what types of lakes were removed with the temporal dataset?
