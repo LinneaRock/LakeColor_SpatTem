@@ -162,6 +162,8 @@ temporal_avg_lms <- temporal %>%
 write.csv(temporal_avg_lms,paste0(Sys.Date(),"_TEMPORAL_Avg_LMs.csv"))
 ```
 
+
+
 run_2023-11-27_TEMPORAL_Avg_LMs.sh
 ```{bash}
 #!/bin/bash
@@ -179,6 +181,25 @@ module load r/4.2.2
 srun Rscript 2023-11-05_TEMPORAL_Avg_LMs.R
 date
 ```
+
+## 2a. Removing lakes that have dominant wavelengths outside of 470-590 for >5 observations. 28 lakes were removed from the analyses.
+```{r}
+temporal<-read.csv("2023-12-05_TEMPORAL_Avg_LMs.csv", header=T,row.names=1)
+
+dWL_subset  <- temporal |>
+  filter(avg_dwl_year > 590 | 
+           avg_dwl_year < 470) |>
+  group_by(lagoslakeid) |>
+  count() |>
+  filter(n > 5) # 28 lakes
+
+delete_lakes <- dWL_subset$lagoslakeid
+
+temporal <- temporal |>
+  filter(!lagoslakeid %in% delete_lakes)
+
+```
+
 
 
 ## b. figure out "black" points

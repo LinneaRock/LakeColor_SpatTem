@@ -1,13 +1,9 @@
 limnoSat_westernUSA.csv
-
 *.RDS
-
 #Ignore DS_Store!
 .DS_Store
-
-
 # ignore masterDF
 masterDF.csv
-
-#ignore dWL file 
+#ignore dWL file
 dWL_all.csv
+2023-12-11_TEMPORAL_Avg_LMs.csv
