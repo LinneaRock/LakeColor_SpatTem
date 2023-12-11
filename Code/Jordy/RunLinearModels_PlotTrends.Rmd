@@ -193,6 +193,7 @@ black<- temporal %>% filter(col_hex=="black") %>% select(lake_nhdid,lake_lat_dec
 
 ## c. rename ecoregion
 ```{r}
+temporal<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2023-12-05_TEMPORAL_Avg_LMs.csv", header=T,row.names=1)
 
 temporal_uniq<-temporal %>%
         select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_color,trend_cat,epanutr_zoneid) %>%
@@ -213,41 +214,79 @@ cols <- c(
 
 temporal_uniq$ecoreg_color <- cols[as.factor(temporal_uniq$epanutr_zoneid )]
 
-states <- map_data("state")
-ggplot(data = temporal_uniq, aes(x = lake_lon_decdeg, y = lake_lat_decdeg, color = ecoreg_color)) +
-  geom_point(size = 0.7) +
-  scale_color_manual(values = unique(temporal_uniq$ecoreg_color), 
-                     labels = unique(temporal_uniq$epanutr_zoneid)) + 
-        guides(color = guide_legend(override.aes = list(size = 5))) +
-  theme_void() +
-  coord_fixed(1.3) +
-labs(color = "Ecoregion") +
-  geom_polygon(data = states, aes(x = long, y = lat, group = group), fill = "transparent", color = "black", linewidth = 0.5) +
-        theme(legend.position = "right",  # Change the legend position to the right
-        legend.box.margin = margin(l = -40))
+legend<-temporal_uniq %>%
+        select(epanutr_zoneid ,ecoreg_color) %>%
+        distinct() %>% arrange(epanutr_zoneid)
+
+print(legend)
+
+  epanutr_zoneid ecoreg_color
+1      epanutr_1  "dodgerblue2"
+2      epanutr_2      "#E31A1C"
+3      epanutr_3       "green4"
+4      epanutr_4      "#6A3D9A"
+5      epanutr_5      "#FF7F00"
+6      epanutr_6        "black"
+7      epanutr_7        "gold1"
+8      epanutr_8     "skyblue2"
+9      epanutr_9      "#FB9A99"
+
+par(mar=c(3,3,3,7), xpd=T)
+plot(temporal_uniq$lake_lon_decdeg, temporal_uniq$lake_lat_decdeg, col= temporal_uniq$ecoreg_color, pch=16, cex=0.5, bty="n")
+legend("right",legend=legend$epanutr_zoneid,col=legend$ecoreg_color, pch=16, pt.cex=3, inset = c(-0.2, 0.1))
 
 temporal<-temporal %>% 
-        mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Northern Appalachians",
-                                          epanutr_zoneid=="epanutr_2"~"Coastal Plains",
+        mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Coastal Plains",
+                                          epanutr_zoneid=="epanutr_2"~"Northern Appalachians",
                                           epanutr_zoneid=="epanutr_3"~"Northern Plains",
-                                          epanutr_zoneid=="epanutr_4"~"Xeric",
-                                          epanutr_zoneid=="epanutr_5"~"Western Mountains",
-                                          epanutr_zoneid=="epanutr_6"~"Southern Plains",
-                                          epanutr_zoneid=="epanutr_7"~"Southern Appalachians",
-                                          epanutr_zoneid=="epanutr_8"~"Upper Midwest",
-                                          epanutr_zoneid=="epanutr_9"~"Temperate Plains", T~"black"))
+                                          epanutr_zoneid=="epanutr_4"~"Southern Appalachians",
+                                          epanutr_zoneid=="epanutr_5"~"Southern Plains",
+                                          epanutr_zoneid=="epanutr_6"~"Temperate Plains",
+                                          epanutr_zoneid=="epanutr_7"~"Upper Midwest",
+                                          epanutr_zoneid=="epanutr_8"~"Western Mountains",
+                                          epanutr_zoneid=="epanutr_9"~"Xeric", T~"black"))
+```
 
+plot ecoregions
+```{r}
+
+cols <- rev(c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+  "black", "gold1",
+  "skyblue2", "#FB9A99"))
 
 temporal_uniq<-temporal %>%
         select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_color,trend_cat,epanutr_zoneid, ecoregion_name) %>%
         distinct()
-temporal_uniq$ecoreg_color <- cols[as.factor(temporal_uniq$epanutr_zoneid )]
+temporal_uniq$ecoregion_name <- factor(temporal_uniq$ecoregion_name, levels=c("Xeric", "Western Mountains","Upper Midwest","Temperate Plains","Southern Plains","Southern Appalachians", "Northern Plains","Northern Appalachians" ,"Coastal Plains"))
+
+temporal_uniq$ecoregion_color <- cols[temporal_uniq$ecoregion_name]
+
+temporal_uniq$ecoregion_color <- factor(temporal_uniq$ecoregion_color, levels=cols)
+
+temporal_uniq %>%
+        select(ecoregion_color,ecoregion_name) %>%
+        distinct() %>% arrange(ecoregion_name,levels(temporal_uniq$ecoregion_name)) %>% print()
+
+  ecoregion_color        ecoregion_name
+1         "#FB9A99"                 Xeric
+2        "skyblue2"     Western Mountains
+3           "gold1"         Upper Midwest
+4           "black"      Temperate Plains
+5         "#FF7F00"       Southern Plains
+6         "#6A3D9A" Southern Appalachians
+7         "green4"       Northern Plains
+8         "#E31A1C" Northern Appalachians
+9     "dodgerblue2"        Coastal Plains
 
 
-eco<-ggplot(data = temporal_uniq, aes(x = lake_lon_decdeg, y = lake_lat_decdeg, color = ecoreg_color)) +
+eco<-ggplot(data = temporal_uniq, aes(x = lake_lon_decdeg, y = lake_lat_decdeg, color=ecoregion_color)) +
   geom_point(size = 0.7) +
-  scale_color_manual(values = unique(temporal_uniq$ecoreg_color), 
-                     labels = unique(temporal_uniq$ecoregion_name)) + 
+  scale_color_manual(values = levels(temporal_uniq$ecoregion_color), 
+                     labels = levels(temporal_uniq$ecoregion_name)) + 
         guides(color = guide_legend(override.aes = list(size = 5))) +
   theme_void() +
   coord_fixed(1.3) +
@@ -257,88 +296,71 @@ labs(color = "Ecoregion") +
         legend.box.margin = margin(l = -20))
 
 
+
+
 jpeg(paste0("Figures/",Sys.Date(),"_Temporal_EcoRegionsMap.jpg"),height=6,width=9, res=500, units="in")
 eco
 dev.off()
-
 ```
 
-
-
 ## d. plot trends on map
+in ggplot
 ```{r}
 require(ggplot2)
 # Get state borders
 states <- map_data("state")
 
-cols <- c("#A2CD5A", # Blue -> Greener
-  "skyblue2",  # Green -> Bluer
-  "blue1", #Intensifying Blue
-  "green4", #Intensifying Green/brown
-  "#E0EEEE", #No trend - Blue
-  "#C1FFC1" #  No trend - Green/brown
-)
-temporal$trend_color <- cols[as.factor(temporal$trend_cat )]
-
-trends<-temporal %>%
-        select(trend_cat,trend_color) %>%
+temporal_uniq<-temporal %>%
+        select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_cat) %>%
         distinct()
+temporal_uniq$trend_cat <- factor(temporal_uniq$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer", "Blue -> Greener","No trend - Green/brown","Intensifying Green/brown"))
+
+
+cols <- c("blue1", #Intensifying Blue,
+            "#E0EEEE", #No trend - Blue
+            "skyblue2",  # Green -> Bluer
+          "#A2CD5A", # Blue -> Greener
+    "#C1FFC1", #  No trend - Green/brown
+  "green4") #Intensifying Green/brown
+
+temporal_uniq$trend_color <- cols[temporal_uniq$trend_cat]
+
+temporal_uniq$trend_color <- factor(temporal_uniq$trend_color, levels=cols)
+
+trends<-temporal_uniq %>%
+        select(trend_cat,trend_color) %>%
+        distinct() %>% arrange(trend_cat,levels(temporal_uniq$trend_cat))
+
 print(trends)
 
-                 trend_cat   trend_color
-1   No trend - Green/brown        "green4"
-2 Intensifying Green/brown        "green1"
-3        Intensifying Blue        "blue1"
-4           Green -> Bluer      "skyblue2"
-5          No trend - Blue "#E0EEEE"
-6          Blue -> Greener        "#C1FFC1"
-
-temporal_uniq<-temporal %>%
-        select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_color,trend_cat) %>%
-        distinct()
+                 trend_cat trend_color
+1        Intensifying Blue      "blue1"
+2          No trend - Blue     "#E0EEEE"
+3           Green -> Bluer    "skyblue2"
+4          Blue -> Greener     "#A2CD5A"
+5   No trend - Green/brown     "#C1FFC1"
+6 Intensifying Green/brown      "green4"
 
 
-map_trends<-ggplot(data = temporal_uniq, aes(x = lake_lon_decdeg, y = lake_lat_decdeg, color = trend_color)) +
+map_trends<-ggplot(data = temporal_uniq, aes(x = lake_lon_decdeg, y = lake_lat_decdeg, color=trend_color)) +
   geom_point(size = 0.7) +
-  scale_color_manual(values = unique(temporal_uniq$trend_color), 
-                     labels = unique(temporal_uniq$trend_cat)) + 
+  scale_color_manual(values = levels(temporal_uniq$trend_color), 
+                     labels = levels(temporal_uniq$trend_cat)) + 
         guides(color = guide_legend(override.aes = list(size = 5))) +
   theme_void() +
   coord_fixed(1.3) +
 labs(color = "Lake color trend") +
   geom_polygon(data = states, aes(x = long, y = lat, group = group), fill = "transparent", color = "black", linewidth = 0.5) +
         theme(legend.position = "right",  # Change the legend position to the right
-        legend.box.margin = margin(l = -40))
-
+        legend.box.margin = margin(l = -20))
 
 
 jpeg(paste0("Figures/",Sys.Date(),"_LakeColorTrends_EcoRegionsMap.jpg"),height=6,width=9, res=500, units="in")
 map_trends
 dev.off()
-
 ```
-
-## e. plot proportion by ecoregion
+check in base R
 ```{r}
-temporal<-temporal %>% 
-        mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Northern Appalachians",
-                                          epanutr_zoneid=="epanutr_2"~"Coastal Plains",
-                                          epanutr_zoneid=="epanutr_3"~"Northern Plains",
-                                          epanutr_zoneid=="epanutr_4"~"Xeric",
-                                          epanutr_zoneid=="epanutr_5"~"Western Mountains",
-                                          epanutr_zoneid=="epanutr_6"~"Southern Plains",
-                                          epanutr_zoneid=="epanutr_7"~"Southern Appalachians",
-                                          epanutr_zoneid=="epanutr_8"~"Upper Midwest",
-                                          epanutr_zoneid=="epanutr_9"~"Temperate Plains", T~"black"))
-
-
-temporal_ecoreg <- temporal %>%
-        select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_cat,trend_color,ecoregion_name) %>%
-        group_by(ecoregion_name) %>%
-        count(trend_cat)%>% 
-  mutate(proportion = n / sum(n))
-
-
 cols <- c("#A2CD5A", # Blue -> Greener
   "skyblue2",  # Green -> Bluer
   "blue1", #Intensifying Blue
@@ -346,8 +368,82 @@ cols <- c("#A2CD5A", # Blue -> Greener
   "#E0EEEE", #No trend - Blue
   "#C1FFC1" #  No trend - Green/brown
 )
-temporal_ecoreg$trend_color <- cols[as.factor(temporal_ecoreg$trend_cat )]
-temporal_ecoreg$ecoregion_name <- factor(temporal_ecoreg$ecoregion_name, levels = rev(unique(temporal_ecoreg$ecoregion_name)))
+temporal$trend_color <- cols[as.factor(temporal$trend_cat)]
+
+trends<-temporal %>%
+        select(trend_cat,trend_color) %>%
+        distinct()
+print(trends)
+
+#                  trend_cat trend_color
+# 1   No trend - Green/brown     "#C1FFC1"
+# 2 Intensifying Green/brown      "green4"
+# 3        Intensifying Blue      "blue1"
+# 4           Green -> Bluer   "skyblue2"
+# 5          No trend - Blue     "#E0EEEE"
+# 6          Blue -> Greener     "#A2CD5A"
+
+temporal_uniq<-temporal %>%
+        select(lake_nhdid, lake_lat_decdeg, lake_lon_decdeg, trend_color,trend_cat) %>%
+        distinct()
+
+plot(temporal_uniq$lake_lon_decdeg, temporal_uniq$lake_lat_decdeg, col= temporal_uniq$trend_color, pch=16, cex=0.5)
+```
+
+
+
+
+## e. plot proportion by ecoregion
+```{r}
+temporal<-temporal %>% 
+        mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Coastal Plains",
+                                          epanutr_zoneid=="epanutr_2"~"Northern Appalachians",
+                                          epanutr_zoneid=="epanutr_3"~"Northern Plains",
+                                          epanutr_zoneid=="epanutr_4"~"Southern Appalachians",
+                                          epanutr_zoneid=="epanutr_5"~"Southern Plains",
+                                          epanutr_zoneid=="epanutr_6"~"Temperate Plains",
+                                          epanutr_zoneid=="epanutr_7"~"Upper Midwest",
+                                          epanutr_zoneid=="epanutr_8"~"Western Mountains",
+                                          epanutr_zoneid=="epanutr_9"~"Xeric", T~"black"))
+
+
+temporal_ecoreg <- temporal %>%
+        select(lake_nhdid, trend_cat,trend_color,ecoregion_name) %>%
+        group_by(ecoregion_name) %>%
+        count(trend_cat)%>% 
+  mutate(proportion = n / sum(n))
+
+
+temporal_ecoreg$trend_cat <- factor(temporal_ecoreg$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer", "Blue -> Greener","No trend - Green/brown","Intensifying Green/brown"))
+
+
+cols <- c("blue1", #Intensifying Blue,
+            "#E0EEEE", #No trend - Blue
+            "skyblue2",  # Green -> Bluer
+          "#A2CD5A", # Blue -> Greener
+    "#C1FFC1", #  No trend - Green/brown
+  "green4") #Intensifying Green/brown
+
+temporal_ecoreg$trend_color <- cols[temporal_ecoreg$trend_cat]
+
+temporal_ecoreg$trend_color <- factor(temporal_ecoreg$trend_color, levels=cols)
+
+temporal_ecoreg[,names(temporal_ecoreg)%in%c("trend_cat","trend_color")] %>%
+        distinct() %>% arrange(trend_cat,levels(temporal_ecoreg$trend_cat))
+
+
+  trend_cat                trend_color
+  <fct>                    <fct>      
+1 Intensifying Blue        "blue1"      
+2 No trend - Blue          "#E0EEEE"    
+3 Green -> Bluer           "skyblue2"   
+4 Blue -> Greener          "#A2CD5A"    
+5 No trend - Green/brown   "#C1FFC1"    
+6 Intensifying Green/brown "green4" 
+
+
+
+temporal_ecoreg$ecoregion_name <- factor(temporal_ecoreg$ecoregion_name, levels=c("Xeric", "Western Mountains","Upper Midwest","Temperate Plains","Southern Plains","Southern Appalachians", "Northern Plains","Northern Appalachians" ,"Coastal Plains"))
 
 gplt<-ggplot(data = temporal_ecoreg,
        aes(
@@ -356,7 +452,8 @@ gplt<-ggplot(data = temporal_ecoreg,
                group = trend_cat,
                col = trend_color
        )) + 
-        scale_color_manual(values = c(unique(temporal_ecoreg$trend_color)), labels =c(unique(temporal_ecoreg$trend_cat))) + 
+        scale_color_manual(values = levels(temporal_ecoreg$trend_color), 
+                           labels = levels(temporal_ecoreg$trend_cat)) + 
         geom_line(linewidth = 2) + 
         geom_point(size = 3) + 
         theme_bw() + 
