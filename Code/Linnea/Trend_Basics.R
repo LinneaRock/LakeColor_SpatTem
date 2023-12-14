@@ -44,7 +44,8 @@ data_tally <- data |>
   ungroup() |>
   group_by(size_group, trend_cat) |>
   summarise(n = n(),
-            percent = (n/totN) * 100)|>
+            percent = (n/totN) * 100,
+            mean_slope = mean(lm_slope))|>
   ungroup() |>
   distinct() 
 
@@ -58,7 +59,8 @@ data_tally_ecoreg <- data |>
   ungroup() |>
   group_by(size_group, ecoregion_name, trend_cat) |>
   summarise(n = n(),
-            percent = (n/totN) * 100)|>
+            percent = (n/totN) * 100,
+            mean_slope = mean(lm_slope))|>
   ungroup() |>
   distinct()
 
@@ -78,7 +80,7 @@ ggplot(data_tally, aes(size_group, n, fill = trend_cat)) +
   geom_bar(stat = 'identity') +
   scale_fill_manual('', values = trend_cols) +
   theme_classic() +
-  geom_text(aes(label = paste0('n=',n,' , ', round(percent,0), '%')), 
+  geom_text(aes(label = paste0('n=',n,', ', round(percent,0), '%')), 
             position = position_stack(vjust=0.5)) +
   labs(x='', y='') +
   scale_x_discrete(labels = c('Large lakes (>10 ha)', 'Small lakes (<10 ha)'))
@@ -94,117 +96,8 @@ ggplot(data_tally_ecoreg, aes(size_group, n, fill = trend_cat)) +
   facet_wrap(.~ecoregion_name, ncol = 3)
 ggsave('Figures/2023-12-14_EcoregionTrendTally.png', width = 7, height = 5, units= 'in', dpi = 1200)
 
-# make table for ecoregional barplot -- too much to put on plot
-reg_tally <- data_tally_ecoreg |>
-  mutate(size_group = ifelse(size_group == 'large', 'Large (>10 ha)', 'Small (<10 ha)')) |>
-  mutate(percent = round(percent,0))
-
-# make table for large lakes 
-gt_tbl_lg <- gt(reg_tally |> filter(size_group == 'Large (>10 ha)') |> select(-size_group))
-simple_tally_tbl_lg <- gt_tbl_lg |>
-  cols_label(
-   # size_group = 'Lake Size',
-    ecoregion_name = 'Ecoregion',
-    trend_cat = 'Trend',
-    n = 'n',
-    percent = '% total'
-  ) |>
-  tab_options(
-    # hide the top-most border
-    table.border.top.color = "white",
-    # make the title size match the body text
-    # heading.title.font.size = px(16),
-    # change the column labels section
-    column_labels.border.top.width = 3,
-    column_labels.border.top.color = "black", 
-    column_labels.border.bottom.width = 3,
-    column_labels.border.bottom.color = "black",
-    # change the bottom of the body
-    table_body.border.bottom.color = "black",
-    # hide the bottom-most line or footnotes
-    # will have a border
-    table.border.bottom.color = "white",
-    # make the width 100%
-    #table.width = pct(100),
-    table.background.color = "white"
-  ) |>
-  cols_align(align="center") |>
-  tab_style(
-    style = list(
-      cell_borders(
-        sides = c("top", "bottom"),
-        color = "white",
-        weight = px(1)
-      ),
-      cell_text(
-        align="center"
-      ),
-      cell_fill(color = "white", alpha = NULL)
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) |>
-  #title setup
-  tab_header(
-    title = html("Number and percent of large lakes (>10 ha) in each trend category within each ecoregion")); simple_tally_tbl_lg
-
-gtsave(data = simple_tally_tbl_lg, "Figures/2023-12-14_EcoregionTrendTally_LargeLakes_TABLE.png", expand = 10)
-
-# make table for large lakes 
-gt_tbl_sm <- gt(reg_tally |> filter(size_group == 'Small (<10 ha)') |> select(-size_group))
-simple_tally_tbl_sm <- gt_tbl_sm |>
-  cols_label(
-   # size_group = 'Lake Size',
-    ecoregion_name = 'Ecoregion',
-    trend_cat = 'Trend',
-    n = 'n',
-    percent = '% total'
-  ) |>
-  tab_options(
-    # hide the top-most border
-    table.border.top.color = "white",
-    # make the title size match the body text
-    # heading.title.font.size = px(16),
-    # change the column labels section
-    column_labels.border.top.width = 3,
-    column_labels.border.top.color = "black", 
-    column_labels.border.bottom.width = 3,
-    column_labels.border.bottom.color = "black",
-    # change the bottom of the body
-    table_body.border.bottom.color = "black",
-    # hide the bottom-most line or footnotes
-    # will have a border
-    table.border.bottom.color = "white",
-    # make the width 100%
-    #table.width = pct(100),
-    table.background.color = "white"
-  ) |>
-  cols_align(align="center") |>
-  tab_style(
-    style = list(
-      cell_borders(
-        sides = c("top", "bottom"),
-        color = "white",
-        weight = px(1)
-      ),
-      cell_text(
-        align="center"
-      ),
-      cell_fill(color = "white", alpha = NULL)
-    ),
-    locations = cells_body(
-      columns = everything(),
-      rows = everything()
-    )
-  ) |>
-  #title setup
-  tab_header(
-    title = html("Number and percent of small lakes (<10 ha) in each trend category within each ecoregion")); simple_tally_tbl_sm
-
-gtsave(data = simple_tally_tbl_sm, "Figures/2023-12-14_EcoregionTrendTally_SmallLakes_TABLE.png", expand = 10)
-
+# save ecoregion tally data as a .csv in the GitHub Data folder
+write.csv(data_tally_ecoreg, 'Data/Ecoregion_TrendTally.csv')
 
 #----------------------------------------#
 
@@ -213,7 +106,9 @@ slopes_data <- data |>
   filter(lm_pval <= 0.05) |>
   select(trend_cat, size_group, lm_slope, ecoregion_name) |>
   distinct() |>
-  mutate(size_group = ifelse(size_group == 'large', 'Large Lakes (>10 ha)', 'Small Lakes (<10 ha)'))
+  mutate(size_group = ifelse(size_group == 'large', 'Large Lakes (>10 ha)', 'Small Lakes (<10 ha)')) |>
+  group_by(trend_cat, size_group, ecoregion_name) |>
+  mutate(mean_slope = mean(lm_slope))
 
 # factor for pretty colors
 slopes_data$trend_cat <- factor(slopes_data$trend_cat, levels=c("Intensifying Blue", "Green -> Bluer", "Blue -> Greener","Intensifying Green/brown"))
@@ -237,6 +132,9 @@ ggplot(slopes_data, aes(lm_slope, trend_cat, color = trend_cat)) +
   facet_wrap(.~size_group, ncol=1) 
 
 ggsave('Figures/2023-12-14_SlopesBoxplot.png', width = 7, height = 5, units= 'in', dpi = 1200)
+
+# boxplots of tally info in each ecoregion
+
 
 #----------------------------------------#
 
