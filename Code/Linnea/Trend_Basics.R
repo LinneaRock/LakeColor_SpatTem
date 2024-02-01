@@ -40,10 +40,11 @@ small_lakes <- data |>
 # 3. Tally trend categories ####
 # tally of all data
 data_tally <- data |>
-  group_by(size_group) |>
+ # group_by(size_group) |>
   mutate(totN = n()) |>
   ungroup() |>
-  group_by(size_group, trend_cat) |>
+  group_by(trend_cat) |>
+ # group_by(size_group, trend_cat) |>
   summarise(n = n(),
             percent = (n/totN) * 100,
             mean_slope = mean(lm_slope))|>
@@ -55,10 +56,12 @@ data_tally$trend_cat <- factor(data_tally$trend_cat, levels=c("Intensifying Blue
 
 # tally of all data in each ecoregion
 data_tally_ecoreg <- data |>
-  group_by(size_group, ecoregion_name) |>
+ # group_by(size_group, ecoregion_name) |>
+  group_by(ecoregion_name) |>
   mutate(totN = n()) |> 
   ungroup() |>
-  group_by(size_group, ecoregion_name, trend_cat) |>
+  group_by(ecoregion_name, trend_cat) |>
+  #group_by(size_group, ecoregion_name, trend_cat) |>
   summarise(n = n(),
             percent = (n/totN) * 100,
             mean_slope = mean(lm_slope))|>
@@ -72,33 +75,56 @@ data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Int
 trend_cols <- c("blue1", # Intensifying Blue,
           "#E0EEEE",     # No trend - Blue
           "skyblue2",    # Green -> Bluer
-          "#A2CD5A",     # Blue -> Greener
+          "green4",     # Blue -> Greener
           "#C1FFC1",     # No trend - Green/brown
-          "green4")      # Intensifying Green/brown
+          "#A2CD5A")      # Intensifying Green/brown
 
-# barplot of tally data - national scale
-ggplot(data_tally, aes(size_group, n, fill = trend_cat)) +
-  geom_bar(stat = 'identity') +
-  scale_fill_manual('', values = trend_cols) +
-  theme_classic() +
-  geom_text(aes(label = paste0('n=',n,', ', round(percent,0), '%')), 
-            position = position_stack(vjust=0.5)) +
-  labs(x='', y='') +
-  scale_x_discrete(labels = c('Large lakes (>10 ha)', 'Small lakes (<10 ha)'))
-ggsave('Figures/2023-12-14_NationalTrendTally.png', width = 6.5, height = 4.5, units= 'in', dpi = 1200)
+data_tally_ecoreg_plotting$trend_color <- trend_cols[data_tally_ecoreg_plotting$trend_cat]
 
-# barplot of tally data - ecoregion scale
-ggplot(data_tally_ecoreg, aes(size_group, n, fill = trend_cat)) +
-  geom_bar(stat = 'identity') +
-  scale_fill_manual('', values = trend_cols) +
-  theme_bw() +
-  labs(x='', y='') +
-  scale_x_discrete(labels = c('Large lakes', 'Small lakes')) +
-  facet_wrap(.~ecoregion_name, ncol = 3)
-ggsave('Figures/2023-12-14_EcoregionTrendTally.png', width = 7, height = 5, units= 'in', dpi = 1200)
+data_tally_ecoreg_plotting$trend_color <- factor(data_tally_ecoreg_plotting$trend_color, levels=trend_cols)
 
-# save ecoregion tally data as a .csv in the GitHub Data folder
-write.csv(data_tally_ecoreg, 'Data/Ecoregion_TrendTally.csv')
+data_tally_ecoreg_plotting <- data_tally_ecoreg |>
+  mutate(percent = ifelse(trend_cat %in% c('Intensifying Blue', 'No trend - Blue', 'Green -> Bluer'), percent * -1, percent))
+
+
+# factor for pretty colors
+data_tally_ecoreg_plotting$trend_cat <- factor(data_tally_ecoreg_plotting$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer","Intensifying Green/brown" ,"No trend - Green/brown","Blue -> Greener"))
+
+ggplot(data_tally_ecoreg_plotting, aes(' ', percent, fill = trend_cat)) +
+  geom_bar(stat = 'identity',position = position_stack(), width = 1) +
+  facet_grid(~ecoregion_name) +
+  theme_classic()+
+  labs(y = "Percent of lakes\n in each ecoregion", x = NULL)+
+  theme(legend.title=element_blank(), axis.text.y = element_blank())+
+  scale_y_continuous(labels = NULL) +
+  scale_fill_manual('', values = trend_cols) 
+
+
+
+
+# # barplot of tally data - national scale
+# ggplot(data_tally, aes(size_group, n, fill = trend_cat)) +
+#   geom_bar(stat = 'identity') +
+#   scale_fill_manual('', values = trend_cols) +
+#   theme_classic() +
+#   geom_text(aes(label = paste0('n=',n,', ', round(percent,0), '%')), 
+#             position = position_stack(vjust=0.5)) +
+#   labs(x='', y='') +
+#   scale_x_discrete(labels = c('Large lakes (>10 ha)', 'Small lakes (<10 ha)'))
+# ggsave('Figures/2023-12-14_NationalTrendTally.png', width = 6.5, height = 4.5, units= 'in', dpi = 1200)
+# 
+# # barplot of tally data - ecoregion scale
+# ggplot(data_tally_ecoreg, aes(size_group, n, fill = trend_cat)) +
+#   geom_bar(stat = 'identity') +
+#   scale_fill_manual('', values = trend_cols) +
+#   theme_bw() +
+#   labs(x='', y='') +
+#   scale_x_discrete(labels = c('Large lakes', 'Small lakes')) +
+#   facet_wrap(.~ecoregion_name, ncol = 3)
+# ggsave('Figures/2023-12-14_EcoregionTrendTally.png', width = 7, height = 5, units= 'in', dpi = 1200)
+# 
+# # save ecoregion tally data as a .csv in the GitHub Data folder
+# write.csv(data_tally_ecoreg, 'Data/Ecoregion_TrendTally.csv')
 
 #----------------------------------------#
 
