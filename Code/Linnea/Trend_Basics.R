@@ -75,31 +75,59 @@ data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Int
 trend_cols <- c("blue1", # Intensifying Blue,
           "#E0EEEE",     # No trend - Blue
           "skyblue2",    # Green -> Bluer
-          "green4",     # Blue -> Greener
+          "#A2CD5A",     # Blue -> Greener
           "#C1FFC1",     # No trend - Green/brown
-          "#A2CD5A")      # Intensifying Green/brown
+          "green4")      # Intensifying Green/brown
 
-data_tally_ecoreg_plotting$trend_color <- trend_cols[data_tally_ecoreg_plotting$trend_cat]
-
-data_tally_ecoreg_plotting$trend_color <- factor(data_tally_ecoreg_plotting$trend_color, levels=trend_cols)
+# data_tally_ecoreg_plotting$trend_color <- trend_cols[data_tally_ecoreg_plotting$trend_cat]
+# 
+# data_tally_ecoreg_plotting$trend_color <- factor(data_tally_ecoreg_plotting$trend_color, levels=trend_cols)
 
 data_tally_ecoreg_plotting <- data_tally_ecoreg |>
   mutate(percent = ifelse(trend_cat %in% c('Intensifying Blue', 'No trend - Blue', 'Green -> Bluer'), percent * -1, percent))
 
 
 # factor for pretty colors
-data_tally_ecoreg_plotting$trend_cat <- factor(data_tally_ecoreg_plotting$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer","Intensifying Green/brown" ,"No trend - Green/brown","Blue -> Greener"))
+data_tally_ecoreg_plotting$trend_cat <- factor(data_tally_ecoreg_plotting$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer","Blue -> Greener","No trend - Green/brown","Intensifying Green/brown"))
 
-ggplot(data_tally_ecoreg_plotting, aes(' ', percent, fill = trend_cat)) +
+myplot_forleg <- ggplot(data_tally_ecoreg_plotting, aes(' ', percent, fill = trend_cat)) +
+  geom_bar(stat = 'identity',position = position_stack(), width = 1) +
+  scale_fill_manual('', values = trend_cols) 
+
+# Using the cowplot package
+legend <- cowplot::get_legend(myplot_forleg)
+
+legend <- grid.draw(legend)
+legend
+
+
+
+### For plotting 2
+# plot colors
+trend_cols2 <- c("blue1", # Intensifying Blue,
+                "#E0EEEE",     # No trend - Blue
+                "skyblue2",    # Green -> Bluer
+                "green4",     # Blue -> Greener
+                "#C1FFC1",     # No trend - Green/brown
+                "#A2CD5A")      # Intensifying Green/brown
+
+
+
+data_tally_ecoreg_plotting2 <- data_tally_ecoreg_plotting
+
+
+# factor for pretty colors
+data_tally_ecoreg_plotting2$trend_cat <- factor(data_tally_ecoreg_plotting2$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer","Intensifying Green/brown","No trend - Green/brown","Blue -> Greener"))
+
+
+ggplot(data_tally_ecoreg_plotting2, aes(' ', percent, fill = trend_cat)) +
   geom_bar(stat = 'identity',position = position_stack(), width = 1) +
   facet_grid(~ecoregion_name) +
   theme_classic()+
   labs(y = "Percent of lakes\n in each ecoregion", x = NULL)+
-  theme(legend.title=element_blank(), axis.text.y = element_blank())+
-  scale_y_continuous(labels = NULL) +
-  scale_fill_manual('', values = trend_cols) 
-
-
+  theme(legend.position = 'none')+
+ # scale_y_continuous(labels = NULL) +
+  scale_fill_manual('', values = trend_cols2) 
 
 
 # # barplot of tally data - national scale
