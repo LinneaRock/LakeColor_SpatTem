@@ -455,97 +455,97 @@ ggplot(data = real_change,
 ggsave('Figures/2023-12-15_RealColorChange_Map.png', width = 6.5, height = 4.5, units= 'in', dpi = 1200)
 
 
-# 6. Figure 2 ####
-ecoreg_cols <- c(
-  "dodgerblue2", 
-  "#E31A1C", # red
-  "green4",
-  "#6A3D9A", # purple
-  "#FF7F00", # orange
-  "black", 
-  "gold1",
-  "skyblue2", 
-  "#FB9A99")
-
-## FIG2a) data tally in each ecoregion ####
-p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
-    geom_bar(stat = 'identity',position = position_stack(), width = 1) +
-    #facet_grid(~ecoregion_abb) +
-    theme_classic()+
-    labs(y = "Percent of lakes\n in each ecoregion", x = NULL)+
-    scale_fill_manual('', values = trend_cols) +
-  facet_grid2(
-    .~ecoregion_abb, 
-    strip = strip_themed(
-      background_x = list(element_rect(color = ecoreg_cols[1], size =2),
-                          element_rect(color = ecoreg_cols[2], size =2),
-                          element_rect(color = ecoreg_cols[3], size =2),
-                          element_rect(color = ecoreg_cols[4], size =2),
-                          element_rect(color = ecoreg_cols[5], size =2),
-                          element_rect(color = ecoreg_cols[6], size =2),
-                          element_rect(color = ecoreg_cols[7], size =2),
-                          element_rect(color = ecoreg_cols[8], size =2),
-                          element_rect(color = ecoreg_cols[9], size =2))
-    )
-  )
-p1
-
-## FIG2b) ecoregion plot ####
-regions.sf <- read_sf("Data/aggr_ecoregions_2015/Aggr_Ecoregions_2015.shp")|>
-  mutate(WSA9_NAME = ifelse(WSA9_NAME == "Temporate Plains", "Temperate Plains", WSA9_NAME))
-
-p2 <- ggplot() +
-  geom_sf(data = regions.sf, aes(fill = WSA9_NAME)) +
-  scale_fill_manual('',values=ecoreg_cols) +
-  theme_bw()
-
-## FIG2c) lakes that changed colors ####
-p3<- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
-  geom_bar(stat = 'identity',position = position_stack(), width = 1) +
-  #facet_grid(~ecoregion_abb) +
-  theme_classic()+
-  labs(y = "No. of lakes\n in each ecoregion", x = NULL)+
-  scale_fill_manual('', values = c("#A2CD5A", "skyblue2")) +
-  geom_text(aes(label = paste0('n=',n)), 
-            position = position_stack(vjust=0.5), size=3) +
-  facet_grid2(
-    .~ecoregion_abb, 
-    strip = strip_themed(
-      background_x = list(element_rect(color = ecoreg_cols[1], size =2),
-                          element_rect(color = ecoreg_cols[2], size =2),
-                          element_rect(color = ecoreg_cols[3], size =2),
-                          element_rect(color = ecoreg_cols[4], size =2),
-                          element_rect(color = ecoreg_cols[5], size =2),
-                          element_rect(color = ecoreg_cols[6], size =2),
-                          element_rect(color = ecoreg_cols[7], size =2),
-                          element_rect(color = ecoreg_cols[8], size =2),
-                          element_rect(color = ecoreg_cols[9], size =2))
-    )
-  )
-
-
-## FIG2d) map of lakes that changed colors ####
-real_change.sf <- st_as_sf(real_change, coords = c('lake_lon_decdeg', 'lake_lat_decdeg'), crs = 4326)
-
-
-p4<-ggplot() +
-  geom_sf(data = regions.sf, fill = 'white') +
-  geom_sf(data = real_change.sf, aes(color=change)) +
-  scale_color_manual('',values = c("#A2CD5A", "skyblue2")) +
-  theme_bw()+
-  labs(x = '', y= '') +
-  # theme(legend.position = c(0.2, 0.2))
-  theme(legend.position = 'none')
-
-layout = 'AAB
-          CCD'
-
-p1 + p2 + p3 + p4 +
-  plot_layout(design=layout) +
-  plot_annotation(tag_levels = 'a', tag_suffix = ')') & 
-  theme(plot.tag = element_text(size = 8)) & theme(plot.margin = margin(0,0,0,0, "cm"))
-
-p1
-p2
-p3
-p4
+# # 6. Figure 2 ####
+# ecoreg_cols <- c(
+#   "dodgerblue2", 
+#   "#E31A1C", # red
+#   "green4",
+#   "#6A3D9A", # purple
+#   "#FF7F00", # orange
+#   "black", 
+#   "gold1",
+#   "skyblue2", 
+#   "#FB9A99")
+# 
+# ## FIG2a) data tally in each ecoregion ####
+# p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
+#     geom_bar(stat = 'identity',position = position_stack(), width = 1) +
+#     #facet_grid(~ecoregion_abb) +
+#     theme_classic()+
+#     labs(y = "Percent of lakes\n in each ecoregion", x = NULL)+
+#     scale_fill_manual('', values = trend_cols) +
+#   facet_grid2(
+#     .~ecoregion_abb, 
+#     strip = strip_themed(
+#       background_x = list(element_rect(color = ecoreg_cols[1], size =2),
+#                           element_rect(color = ecoreg_cols[2], size =2),
+#                           element_rect(color = ecoreg_cols[3], size =2),
+#                           element_rect(color = ecoreg_cols[4], size =2),
+#                           element_rect(color = ecoreg_cols[5], size =2),
+#                           element_rect(color = ecoreg_cols[6], size =2),
+#                           element_rect(color = ecoreg_cols[7], size =2),
+#                           element_rect(color = ecoreg_cols[8], size =2),
+#                           element_rect(color = ecoreg_cols[9], size =2))
+#     )
+#   )
+# p1
+# 
+# ## FIG2b) ecoregion plot ####
+# regions.sf <- read_sf("Data/aggr_ecoregions_2015/Aggr_Ecoregions_2015.shp")|>
+#   mutate(WSA9_NAME = ifelse(WSA9_NAME == "Temporate Plains", "Temperate Plains", WSA9_NAME))
+# 
+# p2 <- ggplot() +
+#   geom_sf(data = regions.sf, aes(fill = WSA9_NAME)) +
+#   scale_fill_manual('',values=ecoreg_cols) +
+#   theme_bw()
+# 
+# ## FIG2c) lakes that changed colors ####
+# p3<- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
+#   geom_bar(stat = 'identity',position = position_stack(), width = 1) +
+#   #facet_grid(~ecoregion_abb) +
+#   theme_classic()+
+#   labs(y = "No. of lakes\n in each ecoregion", x = NULL)+
+#   scale_fill_manual('', values = c("#A2CD5A", "skyblue2")) +
+#   geom_text(aes(label = paste0('n=',n)), 
+#             position = position_stack(vjust=0.5), size=3) +
+#   facet_grid2(
+#     .~ecoregion_abb, 
+#     strip = strip_themed(
+#       background_x = list(element_rect(color = ecoreg_cols[1], size =2),
+#                           element_rect(color = ecoreg_cols[2], size =2),
+#                           element_rect(color = ecoreg_cols[3], size =2),
+#                           element_rect(color = ecoreg_cols[4], size =2),
+#                           element_rect(color = ecoreg_cols[5], size =2),
+#                           element_rect(color = ecoreg_cols[6], size =2),
+#                           element_rect(color = ecoreg_cols[7], size =2),
+#                           element_rect(color = ecoreg_cols[8], size =2),
+#                           element_rect(color = ecoreg_cols[9], size =2))
+#     )
+#   )
+# 
+# 
+# ## FIG2d) map of lakes that changed colors ####
+# real_change.sf <- st_as_sf(real_change, coords = c('lake_lon_decdeg', 'lake_lat_decdeg'), crs = 4326)
+# 
+# 
+# p4<-ggplot() +
+#   geom_sf(data = regions.sf, fill = 'white') +
+#   geom_sf(data = real_change.sf, aes(color=change)) +
+#   scale_color_manual('',values = c("#A2CD5A", "skyblue2")) +
+#   theme_bw()+
+#   labs(x = '', y= '') +
+#   # theme(legend.position = c(0.2, 0.2))
+#   theme(legend.position = 'none')
+# 
+# layout = 'AAB
+#           CCD'
+# 
+# p1 + p2 + p3 + p4 +
+#   plot_layout(design=layout) +
+#   plot_annotation(tag_levels = 'a', tag_suffix = ')') & 
+#   theme(plot.tag = element_text(size = 8)) & theme(plot.margin = margin(0,0,0,0, "cm"))
+# 
+# p1
+# p2
+# p3
+# p4
