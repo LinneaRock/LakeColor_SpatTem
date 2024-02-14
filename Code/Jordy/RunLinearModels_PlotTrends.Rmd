@@ -11,9 +11,9 @@ editor_options:
 Request resources, move to directory, and load modules for R
 ```{bash}
 ssh jvonegge@beartooth.arcc.uwyo.edu
-cd /project/lakecolor/data_analysis
+cd /project/lakecolor/data
 
-salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=5:00:00
 
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.2.2
@@ -492,9 +492,319 @@ dev.off()
 
 
 
+# 3. Figure 1 PCA
+
+Did this in the super computer because was running SO slow on my computer
+
+Read in climate data, average, and merge with the trend dataset, and then with the landcover dataset
+```{r}
+require(tidyverse)
+
+# read in climate data from PRISM
+prism<-readRDS("prism_lakepoint_data.rds")
+range(prism$year) # range of PRSIM data
+#[1] "1984" "2022"
+
+# average the mean temperature, the temperature range, rainfall, fo the 39 years of observation
+prism_avg <- prism %>%
+        group_by(lake_nhdid) %>%
+        mutate(
+                avg_temp_degC = mean(tmean),
+                range_temp_degC = mean(tmax - tmin), # this is tmax and min within a year
+                avg_ppt = mean(ppt),
+                obs_year_prism = n()) %>%
+        ungroup() %>%
+        select(lake_nhdid,avg_temp_degC,range_temp_degC, avg_ppt,obs_year_prism) %>%
+        distinct()
+dim(prism_avg) # 145083 sites
+table(prism_avg$obs_year_prism) # all have 39 years
+summary(prism_avg) # 2 NAs..
+
+# read in temporal trend data
+trends<-read.csv("../data_analysis/TEMPORAL_Avg_LMs/2023-12-05_TEMPORAL_Avg_LMs.csv", header=T, row.names=1)
+
+trends_avg <- trends %>%
+        group_by(lake_nhdid) %>%
+        mutate(avg_obs_site = mean(obs_year),
+               avg_obs_days_site = mean(obs_days_year),
+               avg_dwl_site = mean(avg_dwl_year),
+               avg_range_dwl_site = mean(range_dwl_site_year)) %>%
+                       ungroup()%>%
+                       select(-(c(2,3,18:21,27,32))) %>%
+        distinct()
+dim(trends_avg)
+
+# join the trend data and prism data
+trends_prism <- inner_join(trends_avg,prism_avg, by= join_by(lake_nhdid))
+dim(trends_prism)
+
+# read in landcover data, filter by lakes we have in trends, and average all columns
+landcover <- readRDS("/project/lakecolor/data/archive/2023-09-29_lagos_landcover_data.rds")
+
+landcover_avg <- landcover %>%
+        filter(lake_nhdid %in% trends$lake_nhdid) %>%
+        select(2, 16, 17:33) %>%
+        group_by(lake_nhdid) %>%
+        mutate(
+                landcover_first_year = min(year),
+                landcover_last_year = max(year),
+                obs_year_landcover = n(),
+                across(starts_with("nlcd"), list(avg = ~ mean(.)), .names = "avg_{.col}")
+        ) %>%
+        ungroup() %>%
+        select(1,20:38) %>% # get rid of year and data from individual years
+        distinct()
+
+trends_prism_landcover <- inner_join(trends_prism,landcover_avg, by= join_by(lake_nhdid))
+dim(trends_prism_landcover)
+```
+
+```{r}
+require(tidyverse)
+require(psych)
+
+names(trends_prism_landcover)
+#  [1] "lake_nhdid"                  "epanutr_zoneid"             
+#  [3] "hu12_zoneid"                 "lake_elevation_m"           
+#  [5] "lake_lat_decdeg"             "lake_lon_decdeg"            
+#  [7] "lake_waterarea_ha"           "lake_perimeter_m"           
+#  [9] "lake_islandperimeter_m"      "lake_connectivity_class"    
+# [11] "lake_connectivity_permanent" "lake_totalperimeter_m"      
+# [13] "ws_area_ha"                  "ws_lake_arearatio"          
+# [15] "range_dwl_site"              "mean_range_dwl_site"        
+# [17] "lm_yint"                     "lm_pval"                    
+# [19] "lm_rsq"                      "lm_slope"                   
+# [21] "resid_yint"                  "resid_pval"                 
+# [23] "resid_rsq"                   "resid_slope"                
+# [25] "dwl_prior2002"               "trend_cat"                  
+# [27] "avg_obs_site"                "avg_obs_days_site"          
+# [29] "avg_dwl_site"                "avg_range_dwl_site"         
+# [31] "avg_temp_degC"               "range_temp_degC"            
+# [33] "avg_ppt"                     "obs_year_prism"             
+# [35] "landcover_first_year"        "landcover_last_year"        
+# [37] "obs_year_landcover"          "avg_nlcd_barren31_pct"      
+# [39] "avg_nlcd_cultcrop82_pct"     "avg_nlcd_devhi24_pct"       
+# [41] "avg_nlcd_devlow22_pct"       "avg_nlcd_devmed23_pct"      
+# [43] "avg_nlcd_devopen21_pct"      "avg_nlcd_forcon42_pct"      
+# [45] "avg_nlcd_fordec41_pct"       "avg_nlcd_formix43_pct"      
+# [47] "avg_nlcd_grass71_pct"        "avg_nlcd_icesnow12_pct"     
+# [49] "avg_nlcd_openwater11_pct"    "avg_nlcd_past81_pct"        
+# [51] "avg_nlcd_shrub52_pct"        "avg_nlcd_wetemerg95_pct"    
+# [53] "avg_nlcd_wetwood90_pct" 
 
 
-# 3. seasonal variability in lake color
+# select the variables you want to work on, but it will automatically grab date and lake_ndhid
+Y <- trends_prism_landcover %>%
+        select(
+                lake_nhdid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                lake_islandperimeter_m,
+                ws_area_ha,
+                avg_temp_degC,
+                range_temp_degC,
+                avg_ppt,
+                avg_nlcd_barren31_pct,
+                avg_nlcd_cultcrop82_pct,
+                avg_nlcd_devhi24_pct,
+                avg_nlcd_devlow22_pct,
+                avg_nlcd_devmed23_pct,
+                avg_nlcd_devopen21_pct,
+                avg_nlcd_forcon42_pct,
+                avg_nlcd_fordec41_pct,
+                avg_nlcd_formix43_pct,
+                avg_nlcd_grass71_pct,
+                avg_nlcd_icesnow12_pct,
+                avg_nlcd_openwater11_pct,
+                avg_nlcd_past81_pct,
+                avg_nlcd_shrub52_pct,
+                avg_nlcd_wetemerg95_pct,
+                avg_nlcd_wetwood90_pct
+        )
+
+dim(Y)
+#[1] 81035    27
+Y <- Y %>%
+       column_to_rownames(var = "lake_nhdid") %>% distinct() %>% drop_na()
+dim(Y)
+#[1] 80959    26
+
+S <- cov(Y)
+R <- cor(Y)
+round(R,4)
+
+pc <- princomp(Y, cor=T)
+spc <- summary(pc, loadings=T, cutoff=0)
+lambda <- pc$sd^2
+
+#subset only by lakes in Y
+trends_prism_landcover_sub <- trends_prism_landcover %>%
+        filter(lake_nhdid %in% rownames(Y))
+nrow(trends_prism_landcover_sub)==nrow(Y) #true
+ 
+rm(list=setdiff(ls(), c("pc","spc","Y","trends_prism_landcover_sub")))
+
+save.image(paste0("../data_analysis/",Sys.Date(),"_PCA_Fig1.Rdata"))
+
+#if you wanted to visually look at
+png(paste0("../data_analysis/",Sys.Date(),"_correlation_vars_PCA.png"), height=10, width=10, units="in",res=400)
+pairs.panels(Y,
+             lm=T,
+             method="pearson",
+             density=T,
+             hist.col = "green4",
+             ellipses=F,
+             ci=F)
+dev.off()
+
+```
+
+Put onto local drive
+
+```{r}
+load("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-02-14_PCA_Fig1.rdata")
+```
+
+
+Look at the summary and decide how many PCAs you want to keep based on
+1. The proportion of variance (try to get up to 80%)
+2. Eigenvalues in "Importance of components" - Standard deviation should be greater than 1
+3. Where is "the elbow in the plot"
+```{r}
+spc
+
+for (i in 1:9){
+print(paste0("Principe component",i))
+print(pc$loadings[which(abs(pc$loadings[,i])>0.3),i])
+}
+
+plot(pc, type="lines", main = "")
+```
+
+Decision - I'm going to keep 9 PCs...
+
+Interpret loadings using a cutoff of 0.3
+Component 1 - could represent higher elevation lakes have lower longitudes (in the east) and have lower development landcover
+Component 2 - development measures are correlated
+Component 3 - smaller lake areas have smaller lake perimeters (duh), with smaller island perimeters, and smaller watershed areas
+Component 4 - lower latitude lakes have more rain, higher mixed forest, and lower shrubs
+Component 5 - higher latitudes have lower temperatures, more grasslands and less pastures
+Component 6 - lower temperature ranges occur in more barren places with lower deciduous forest cover and higher wetland woods
+Component 7 - lower temperature ranges are in higher cultivated crop areas and pastures with shrubs and less wetemerge
+Component 8 - higher cultivated crops is highest conifer and deciduous forests and lower forest mixed and less shrubs
+Component 9 - lower cultivated crops has lower open water and more pastures and wet woodlands
+
+
+
+
+
+Plot
+```{r}
+bg.fui = tibble(
+        ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+        ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+        color = paste0(c(
+                "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+                "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+                "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04"),"60")
+)
+
+bg.fui<-as.data.frame(bg.fui)
+
+
+
+pc.scores <- as.data.frame(pc$scores)
+pc.scores<-pc.scores %>% 
+        rownames_to_column() %>%
+        rename(lake_nhdid=rowname) %>%
+        inner_join(.,trends_prism_landcover_sub, by=join_by(lake_nhdid)) %>%
+        mutate( col_hex = case_when(avg_dwl_site >=bg.fui[1,1] & avg_dwl_site <bg.fui[1,2] ~ bg.fui[1,3],
+                                    avg_dwl_site >=bg.fui[2,1] & avg_dwl_site <bg.fui[2,2] ~bg.fui[2,3], 
+                                    avg_dwl_site >=bg.fui[3,1] & avg_dwl_site <bg.fui[3,2] ~bg.fui[3,3]   , 
+                                    avg_dwl_site >=bg.fui[4,1] & avg_dwl_site <bg.fui[4,2] ~bg.fui[4,3]   , 
+                                    avg_dwl_site >=bg.fui[5,1] & avg_dwl_site <bg.fui[5,2] ~bg.fui[5,3]   , 
+                                    avg_dwl_site >=bg.fui[6,1] & avg_dwl_site <bg.fui[6,2] ~bg.fui[6,3]   , 
+                                    avg_dwl_site >=bg.fui[7,1] & avg_dwl_site <bg.fui[7,2] ~bg.fui[7,3]   , 
+                                    avg_dwl_site >=bg.fui[8,1] & avg_dwl_site <bg.fui[8,2] ~bg.fui[8,3]   , 
+                                    avg_dwl_site >=bg.fui[9,1] & avg_dwl_site <bg.fui[9,2] ~bg.fui[9,3]   , 
+                                    avg_dwl_site >=bg.fui[10,1] & avg_dwl_site <bg.fui[10,2] ~bg.fui[10,3]   , 
+                                    avg_dwl_site >=bg.fui[11,1] & avg_dwl_site <bg.fui[11,2] ~bg.fui[11,3]   , 
+                                    avg_dwl_site >=bg.fui[12,1] & avg_dwl_site <bg.fui[12,2] ~bg.fui[12,3]   , 
+                                    avg_dwl_site >=bg.fui[13,1] & avg_dwl_site <bg.fui[13,2] ~bg.fui[13,3]   , 
+                                    avg_dwl_site >=bg.fui[14,1] & avg_dwl_site <bg.fui[14,2] ~bg.fui[14,3]   , 
+                                    avg_dwl_site >=bg.fui[15,1] & avg_dwl_site <bg.fui[15,2] ~bg.fui[15,3]   , 
+                                    avg_dwl_site >=bg.fui[16,1] & avg_dwl_site <bg.fui[16,2] ~bg.fui[16,3]   , 
+                                    avg_dwl_site >=bg.fui[17,1] & avg_dwl_site <bg.fui[17,2] ~bg.fui[17,3]   , 
+                                    avg_dwl_site >=bg.fui[18,1] & avg_dwl_site <bg.fui[18,2] ~bg.fui[18,3]   , 
+                                    avg_dwl_site >=bg.fui[19,1] & avg_dwl_site <bg.fui[19,2] ~bg.fui[19,3]   , 
+                                    avg_dwl_site >=bg.fui[20,1] & avg_dwl_site <bg.fui[20,2] ~bg.fui[20,3]   , 
+                                    avg_dwl_site >=bg.fui[21,1] & avg_dwl_site <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
+
+
+# rename variable labels
+
+rownames(pc$loadings)<- c("Elevation (m)" , "Latitude" , "Longitutde",
+"Lake area (ha)" , "Lake perimeter (m)" , "Island perimeter (m)",
+"W.S. area (ha)" , "Temp (C)" , "Range temp (C)",
+"Precip (ppt)" , "Barren (%)" , "Cultcrop (%)",
+"Devhi (%)" , "Devlow (%)" , "Devmed (%)",
+"Devopen (%)" , "Forcon (%)" , "Fordec (%)",
+"Formix (%)" , "Grass (%)" , "Icesnow (%)",
+"Openwater (%)" , "Past (%)" , "Shrub (%)",
+"Wetemerg (%)" , "Wetwood (%)")
+
+
+
+
+
+i=1
+for(i in 1:8){
+load <- pc$loadings[, c(i,i+1)]
+load <- load[abs(load[,1])>0.3 | abs(load[,2])>0.3, ]
+
+png(paste0("../",Sys.Date(),"_PC",i,"_PC",i+1,"_SepScale.png"), width = 8, height=6, units = "in", res=400)
+par(mar=c(5,5,1,1), xpd=T)
+plot(pc.scores[,i+1], pc.scores[,i+2], pch = 19, col = pc.scores$col_hex, xlab=paste0("PC",i),ylab=paste0("PC",i+1))
+
+# scaling factor for arrow length
+scaling_factor <- c(19,30,15,10,12,12,12,15)[i]
+
+
+# Add arrows for loadings of PC1 and PC2
+arrows(0, 0, load[, 1] * scaling_factor, load[, 2] * scaling_factor, 
+       angle = 20, length = 0.1, col = "black")
+
+
+text(load[, 1] * scaling_factor, load[, 2] * scaling_factor,
+     labels = rownames(load), pos = 3, col = "black", cex = 1.1)
+dev.off()
+}
+
+```
+
+
+Multiple linear regression using our components
+```{r}
+lake_color <-
+```
+
+
+
+We want 
+
+
+
+# 4. Figure 3 - time series
+
+```{r}
+
+```
+
+
+# 4. seasonal variability in lake color
 
 ```{r}
 names(temporal)
