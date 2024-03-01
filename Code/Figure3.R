@@ -148,6 +148,10 @@ c1 <- trend_no_change |>
   # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c1
 
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c1.png', height=4.5, width=6.5, units='in', res=500)
+c1
+dev.off()
+
 
 
 # plot lakes that shifted from green to blue
@@ -172,6 +176,11 @@ c2 <- trend_change |>
 # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
 # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c2
+
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c2.png', height=4.5, width=6.5, units='in', res=500)
+c2
+dev.off()
 
 
 ## 4b. Blue to green lakes ####
@@ -199,6 +208,10 @@ c3 <- trend_no_change |>
 # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c3
 
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c3.png', height=4.5, width=6.5, units='in', res=500)
+c3
+dev.off()
+
 
 # plot lakes that shifted from blue to greener
 c4 <- trend_change |> 
@@ -223,6 +236,10 @@ c4 <- trend_change |>
 # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c4
 
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c4.png', height=4.5, width=6.5, units='in', res=500)
+c4
+dev.off()
+
 # 5. Histograms of slopes in each category ####
 
 # histogram for first figure above - trending green to blue, no change
@@ -231,10 +248,15 @@ h1 <- trend_no_change |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope)) +
+  geom_histogram(aes(lm_slope), binwidth=0.1) +
   theme_minimal() +
-  labs(y='',x='')
+  labs(y='',x='') +
+  xlim(-3.8, 2.5)
 h1
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h1.png', height=4.5, width=6.5, units='in', res=500)
+h1
+dev.off()
 
 # histogram for second figure above - shifted from green to blue
 h2 <- trend_change |>
@@ -242,10 +264,15 @@ h2 <- trend_change |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope)) +
+  geom_histogram(aes(lm_slope), binwidth=0.1) +
   theme_minimal() +
-  labs(y='',x='')
+  labs(y='',x='') +
+  xlim(-4,2.5)
 h2
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h2.png', height=4.5, width=6.5, units='in', res=500)
+h2
+dev.off()
 
 # histogram for first figure above - trending blue to green, no change
 h3 <- trend_no_change |>
@@ -253,10 +280,15 @@ h3 <- trend_no_change |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope)) +
+  geom_histogram(aes(lm_slope),binwidth=0.1) +
   theme_minimal() +
-  labs(y='',x='')
+  labs(y='',x='') +
+  xlim(-4,2.5)
 h3
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h3.png', height=4.5, width=6.5, units='in', res=500)
+h3
+dev.off()
 
 # histogram for fourth figure above - shifted from blue to green
 h4 <- trend_change |>
@@ -264,8 +296,35 @@ h4 <- trend_change |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope)) +
+  geom_histogram(aes(lm_slope),binwidth=0.1) +
+  theme_minimal() +
+  labs(y='',x='') +
+  xlim(-4,2.5)
+h4
+
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h4.png', height=4.5, width=6.5, units='in', res=500)
+h4
+dev.off()
+
+
+library(patchwork)
+h1/h2/h3/h4
+
+
+ggsave(c1, 'Figures/Figure2/c1.png')
+
+
+trend_change |>
+  filter(change == 'Shift to green') |>
+  select(lagoslakeid, lm_slope) |>
+  distinct() |>
+  ggplot() +
+  geom_violin(aes(lm_slope, '')) +
   theme_minimal() +
   labs(y='',x='')
-h4
+
+
+
+
 

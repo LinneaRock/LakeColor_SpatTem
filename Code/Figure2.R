@@ -101,6 +101,11 @@ p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
 
 p1
 
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1.png', height=4.5, width=6.5, units='in', res=500)
+p1
+dev.off()
+
+
 # 4. Part b of Figure 2 ####
 p2 <- ggplot() +
   geom_sf(data = regions.sf, aes(fill = WSA9_NAME)) +
@@ -108,6 +113,10 @@ p2 <- ggplot() +
   theme_bw()
 
 p2
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p2.png', height=4.5, width=6.5, units='in', res=500)
+p2
+dev.off()
 
 # 5. Tally lakes that actually changed color (not just trended that way) ####
 ## 5a. first get all lakes that are in changin categories ####
@@ -170,6 +179,13 @@ p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
 
 p3
 
+
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p3.png', height=4.5, width=6.5, units='in', res=500)
+p3
+dev.off()
+
+ggsave(p3, 'Figures/Figure1/p3.png', height=4.5, width=6.5, units='in',dpi=1200)
+
 # 7. Part d of Figure 2 ####
 # transform our real change data to sf object
 real_change.sf <- st_as_sf(real_change, coords = c('lake_lon_decdeg', 'lake_lat_decdeg'), crs = 4326)
@@ -183,8 +199,12 @@ p4 <- ggplot() +
   labs(x = '', y= '') +
   theme(legend.position = 'none') # removed legend because it is redundant with fig 2c
 
+png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', res=500)
 p4
+dev.off()
 
+
+ggsave(p4, path='C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', dpi=1200)
 
 
 # 8. Attempt to plot them all together via patchwork ####
