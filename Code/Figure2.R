@@ -9,9 +9,11 @@ library(tidyverse)
 library(patchwork)
 library(ggh4x) # for adding manual colors to facet wrap labels
 library(sf)
+library(ggpattern)
+
 
 # below is our finalized dataset saved to Beartooth on 2023-12-11
-data <- read.csv('Data/2023-12-11_Temporal_Avg_LMs.csv') |> 
+data <- read.csv('C:/PhD_Code/LakeColor_SpatTem/Data/2023-12-11_Temporal_Avg_LMs.csv') |> 
   # add in size group variable to delineate large vs small lakes
   mutate(size_group = ifelse(lake_waterarea_ha > 10,'large','small')) |>
   # add names of ecoregions
@@ -55,71 +57,16 @@ ecoreg_cols <- c(
 
 trend_cols <- c("blue1",       # Intensifying Blue,
                 "#E0EEEE",     # No trend - Blue
-                "skyblue2",    # Green -> Bluer
-                "#A2CD5A",     # Blue -> Greener
+                "skyblue2",    # Blue -> Greener
+                "skyblue2",    # Lake became green -- add stripes
+                "#A2CD5A",     # lake became blue -- add stripes
+                "#A2CD5A",     # Green -> Bluer
                 "#C1FFC1",     # No trend - Green/brown
                 "green4")      # Intensifying Green/brown
 
 
-# 2. Simple tally of data ####
-
-data_tally_ecoreg <- data |>
-  group_by(ecoregion_name, ecoregion_abb) |>
-  mutate(totN = n()) |> 
-  ungroup() |>
-  group_by(ecoregion_name, trend_cat, ecoregion_abb) |>
-  reframe(n = n(),
-            percent = (n/totN) * 100,
-            mean_slope = mean(lm_slope))|>
-  distinct()
-
-# factor for pretty colors
-data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Green -> Bluer", "Blue -> Greener","No trend - Green/brown","Intensifying Green/brown"))
-
-
-# 3. Part a of Figure 2 ####
-p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
-  geom_bar(stat = 'identity',position = position_stack(), width = 1) +
-  #facet_grid(~ecoregion_abb) +
-  theme_classic()+
-  labs(y = "Percent of lakes in\n each trend category", x = NULL)+
-  scale_fill_manual('', values = trend_cols) +
-  facet_grid2(
-    .~ecoregion_abb, 
-    strip = strip_themed(
-      background_x = list(element_rect(color = ecoreg_cols[1], linewidth=2),
-                          element_rect(color = ecoreg_cols[2], linewidth=2),
-                          element_rect(color = ecoreg_cols[3], linewidth=2),
-                          element_rect(color = ecoreg_cols[4], linewidth=2),
-                          element_rect(color = ecoreg_cols[5], linewidth=2),
-                          element_rect(color = ecoreg_cols[6], linewidth=2),
-                          element_rect(color = ecoreg_cols[7], linewidth=2),
-                          element_rect(color = ecoreg_cols[8], linewidth=2),
-                          element_rect(color = ecoreg_cols[9], linewidth=2))
-    )
-  )
-
-p1
-
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1.png', height=4.5, width=6.5, units='in', res=500)
-p1
-dev.off()
-
-
-# 4. Part b of Figure 2 ####
-p2 <- ggplot() +
-  geom_sf(data = regions.sf, aes(fill = WSA9_NAME)) +
-  scale_fill_manual('',values=ecoreg_cols) +
-  theme_bw()
-
-p2
-
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p2.png', height=4.5, width=6.5, units='in', res=500)
-p2
-dev.off()
-
-# 5. Tally lakes that actually changed color (not just trended that way) ####
-## 5a. first get all lakes that are in changin categories ####
+# 2. Tally lakes that actually changed color (not just trended that way) ####
+## 2a. first get all lakes that are in changin categories ####
 color_change_data <- data |>
   filter(trend_cat %in% c('Blue -> Greener', 'Green -> Bluer')) |>
   group_by(year, trend_cat) |>
@@ -130,7 +77,7 @@ color_change_data <- data |>
   ungroup()
 
 
-## 5b. next, find lakes that ACTUALLY shifted from blue to green or green to blue ####
+## 2b. next, find lakes that ACTUALLY shifted from blue to green or green to blue ####
 real_change <- color_change_data |>
   group_by(lake_nhdid) %>%
   mutate(dwl_after2002=mean(avg_dwl_year[year > 2002])) %>%
@@ -149,8 +96,113 @@ real_change <- color_change_data |>
 Change_Tally_Ecoregion <- real_change |>
   group_by(change, ecoregion_name, ecoregion_abb) |>
   reframe(n = n(),
-            mean_slope = mean(lm_slope))|>
+          mean_slope = mean(lm_slope))|>
   distinct() 
+
+
+changed_lakes <- real_change |>
+  select(lagoslakeid, change) |>
+  unique() |>
+  mutate(change = ifelse(change=='Green -> Blue',
+                            'Lake became blue',
+                            'Lake became green'))
+
+
+# 3. Simple tally of data ####
+
+data_tally_ecoreg <- data |>
+  left_join(changed_lakes) |>
+  mutate(trend_cat = case_when(change=='Lake became blue'~'Lake became blue',
+                               change=='Lake became green'~'Lake became green',
+                               .default = trend_cat)) |>
+  group_by(ecoregion_name, ecoregion_abb) |>
+  mutate(totN = n()) |> 
+  ungroup() |>
+  group_by(ecoregion_name, trend_cat, ecoregion_abb) |>
+  reframe(n = n(),
+            percent = (n/totN) * 100,
+            mean_slope = mean(lm_slope))|>
+  distinct()
+
+
+
+# factor for pretty colors
+data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Blue -> Greener", 'Lake became green', 'Lake became blue', "Green -> Bluer", "No trend - Green/brown","Intensifying Green/brown"))
+
+
+# 4. Part a of Figure 2 ####
+p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat, pattern=trend_cat, pattern_color=trend_cat)) +
+  geom_bar_pattern(stat = 'identity',position = position_stack(), width = 1, pattern_density=0.005) +
+  #facet_grid(~ecoregion_abb) +
+  theme_classic()+
+  labs(y = "Percent of lakes in\n each trend category", x = NULL)+
+  scale_fill_manual('', values = trend_cols) +
+  scale_pattern_manual(values=c('none','none','none','stripe','stripe','none','none', 'none')) +
+   scale_pattern_color_manual(values=c('none','none','none','green4','blue1','none','none', 'none')) +
+  facet_grid2(
+    .~ecoregion_abb, 
+    strip = strip_themed(
+      background_x = list(element_rect(color = ecoreg_cols[1], linewidth=2),
+                          element_rect(color = ecoreg_cols[2], linewidth=2),
+                          element_rect(color = ecoreg_cols[3], linewidth=2),
+                          element_rect(color = ecoreg_cols[4], linewidth=2),
+                          element_rect(color = ecoreg_cols[5], linewidth=2),
+                          element_rect(color = ecoreg_cols[6], linewidth=2),
+                          element_rect(color = ecoreg_cols[7], linewidth=2),
+                          element_rect(color = ecoreg_cols[8], linewidth=2),
+                          element_rect(color = ecoreg_cols[9], linewidth=2))
+    )
+  ) +
+  theme(legend.position = 'none')
+
+p1 
+
+ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1.png',height=4.5, width=6.5, units='in', dpi=1200)
+
+# make simple one just for legend
+ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
+  geom_bar(stat = 'identity') +
+  theme_minimal() +
+  scale_fill_manual('', values = trend_cols) 
+
+ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1_legend.png',height=4.5, width=6.5, units='in', dpi=1200)
+
+
+# 5. Part b of Figure 2 ####
+
+regions.sf.names <- regions.sf |>
+  mutate(name = paste0(WSA9_NAME, ' (', WSA9, ')'))
+
+p2 <- ggplot() +
+  geom_sf(data = regions.sf.names, aes(fill = name)) +
+  scale_fill_manual('',values=ecoreg_cols) +
+  theme_minimal() +
+  theme(plot.caption.position = "plot",
+        plot.caption = element_text(hjust = 0, family = "serif"),
+        legend.position = 'none',
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+p2
+
+ggsave('Figures/Figure1/p2.png',height=4.5, width=6.5, units='in', dpi=1200)
+
+
+# ecoregion figure for fig 1 of MS?
+ggplot() +
+  geom_sf(data = regions.sf.names, aes(fill = name)) +
+  scale_fill_manual('',values=ecoreg_cols) +
+  theme_bw()
+
+
+ggsave('Figures/ecoregions.png',height=4.5, width=6.5, units='in', dpi=1200)
+
 
 
 # 6. Part c of Figure 2 ####
@@ -160,7 +212,7 @@ p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
   theme_classic()+
   labs(y = "No. of lakes that \n switched colors", x = NULL)+
   scale_fill_manual('', values = c("#A2CD5A", "skyblue2")) +
-  geom_text(aes(label = paste0('n=',n)), 
+  geom_text(aes(label = n), check_overlap = TRUE,
             position = position_stack(vjust=0.5), size=3) +
   facet_grid2(
     .~ecoregion_abb, 
@@ -175,16 +227,12 @@ p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
                           element_rect(color = ecoreg_cols[8], size =2),
                           element_rect(color = ecoreg_cols[9], size =2))
     )
-  )
+  ) +
+  theme(legend.position = c(0.25, 0.75))
 
 p3
 
-
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p3.png', height=4.5, width=6.5, units='in', res=500)
-p3
-dev.off()
-
-ggsave(p3, 'Figures/Figure1/p3.png', height=4.5, width=6.5, units='in',dpi=1200)
+ggsave('Figures/Figure1/p3.png', height=4.5, width=6.5, units='in',dpi=1200)
 
 # 7. Part d of Figure 2 ####
 # transform our real change data to sf object
@@ -197,21 +245,25 @@ p4 <- ggplot() +
   scale_color_manual('',values = c("#A2CD5A", "skyblue2")) +
   theme_bw()+
   labs(x = '', y= '') +
-  theme(legend.position = 'none') # removed legend because it is redundant with fig 2c
+  theme_minimal() +
+  theme(plot.caption.position = "plot",
+        plot.caption = element_text(hjust = 0, family = "serif"),
+        legend.position = 'none', # removed legend because it is redundant with fig 2c
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', res=500)
 p4
-dev.off()
+
+ggsave('Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', dpi=1200)
 
 
-ggsave(p4, path='C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', dpi=1200)
+p1/p3 + plot_annotation(tag_levels = 'a', tag_suffix = ')')
 
-
-# 8. Attempt to plot them all together via patchwork ####
-# NOTE: this is not really working right now. The plots are all just huge - we need some finagling (or if someone with powerpoint skills wants to ggsave the plots and make it in powerpoint!!)
-
-(p1 + p2) / (p3 + p4) +
-  plot_annotation(tag_levels = 'a', tag_suffix = ')') & 
-  theme(plot.tag = element_text(size = 8)) & theme(plot.margin = margin(0,0,0,0, "cm"))
-
+ggsave('Figures/Figure1/a_b.png', height=6, width=8, units='in', dpi=1200)
 
