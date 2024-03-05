@@ -236,9 +236,8 @@ ggsave('Figures/Figure3/c4.png', height=3, width=5, units='in')
 # 5. Histograms of slopes in each category ####
 
 # histogram for first figure above - trending green to blue, no change
-
-q2 <- median((trend_no_change |>
-       filter(trend_cat == 'Green -> Bluer'))$lm_slope)
+q2 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Green -> Bluer'))$lm_slope, 0.5)
 
 q1 <- quantile((trend_no_change |>
                   filter(trend_cat == 'Green -> Bluer'))$lm_slope, 0.25)
@@ -251,8 +250,8 @@ h1 <- trend_no_change |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope), binwidth=0.1) +
-  geom_vline(xintercept = c(q1, q2, q3)) +
+  geom_histogram(aes(lm_slope), binwidth=0.05) +
+  geom_vline(xintercept = c(q1, q2, q3), color = "#A2CD5A") +
   theme_minimal() +
   labs(y='',x='') +
   xlim(-3.8, 2.5)
@@ -261,12 +260,22 @@ h1
 
 
 # histogram for second figure above - shifted from green to blue
+q2 <- quantile((trend_change |>
+                  filter(change == 'Shift to blue'))$lm_slope, 0.5)
+
+q1 <- quantile((trend_change |>
+                  filter(change == 'Shift to blue'))$lm_slope, 0.25)
+
+q3 <- quantile((trend_change |>
+                  filter(change == 'Shift to blue'))$lm_slope, 0.75)
+
 h2 <- trend_change |>
   filter(change == 'Shift to blue') |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope), binwidth=0.1) +
+  geom_histogram(aes(lm_slope), binwidth=0.05) +
+  geom_vline(xintercept = c(q1, q2, q3), color = "blue1") +
   theme_minimal() +
   labs(y='',x='') +
   xlim(-4,2.5)
@@ -275,54 +284,59 @@ h2
 
 
 # histogram for first figure above - trending blue to green, no change
+q2 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Blue -> Greener'))$lm_slope, 0.5)
+
+q1 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Blue -> Greener'))$lm_slope, 0.25)
+
+q3 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Blue -> Greener'))$lm_slope, 0.75)
+
 h3 <- trend_no_change |>
   filter(trend_cat == 'Blue -> Greener') |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope),binwidth=0.1) +
+  geom_histogram(aes(lm_slope),binwidth=0.05) +
+  geom_vline(xintercept = c(q1, q2, q3), color = "skyblue2") +
   theme_minimal() +
   labs(y='',x='') +
   xlim(-4,2.5)
 h3
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h3.png', height=4.5, width=6.5, units='in', res=500)
-h3
-dev.off()
+
 
 # histogram for fourth figure above - shifted from blue to green
+q2 <- quantile((trend_change |>
+                  filter(change == 'Shift to green'))$lm_slope, 0.5)
+
+q1 <- quantile((trend_change |>
+                  filter(change == 'Shift to green'))$lm_slope, 0.25)
+
+q3 <- quantile((trend_change |>
+                  filter(change == 'Shift to green'))$lm_slope, 0.75)
+
 h4 <- trend_change |>
   filter(change == 'Shift to green') |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
-  geom_histogram(aes(lm_slope),binwidth=0.1) +
+  geom_histogram(aes(lm_slope),binwidth=0.05) +
+  geom_vline(xintercept = c(q1, q2, q3), color = "green4") +
   theme_minimal() +
   labs(y='',x='') +
   xlim(-4,2.5)
 h4
 
-
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h4.png', height=4.5, width=6.5, units='in', res=500)
-h4
-dev.off()
 
 
 library(patchwork)
 h1/h2/h3/h4
 
 
-ggsave(c1, 'Figures/Figure2/c1.png')
+ggsave('Figures/Figure3/hists.png', height=6, width =3, units='in', dpi=1200)
 
-
-trend_change |>
-  filter(change == 'Shift to green') |>
-  select(lagoslakeid, lm_slope) |>
-  distinct() |>
-  ggplot() +
-  geom_violin(aes(lm_slope, '')) +
-  theme_minimal() +
-  labs(y='',x='')
 
 
 
