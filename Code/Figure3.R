@@ -37,8 +37,8 @@ data <- read.csv('Data/2023-12-11_Temporal_Avg_LMs.csv') |>
 
 trend_cols <- c("blue1",       # Intensifying Blue,
                 "#E0EEEE",     # No trend - Blue
-                "skyblue2",    # Green -> Bluer
-                "#A2CD5A",     # Blue -> Greener
+                "skyblue2",    # Blue -> Greener
+                "#A2CD5A",     # Green -> Bluer
                 "#C1FFC1",     # No trend - Green/brown
                 "green4")      # Intensifying Green/brown
 
@@ -148,9 +148,7 @@ c1 <- trend_no_change |>
   # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c1
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c1.png', height=4.5, width=6.5, units='in', res=500)
-c1
-dev.off()
+ggsave('Figures/Figure3/c1.png', height=3, width=5, units='in')
 
 
 
@@ -178,9 +176,7 @@ c2 <- trend_change |>
 c2
 
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c2.png', height=4.5, width=6.5, units='in', res=500)
-c2
-dev.off()
+ggsave('Figures/Figure3/c2.png', height=3, width=5, units='in')
 
 
 ## 4b. Blue to green lakes ####
@@ -200,17 +196,16 @@ c3 <- trend_no_change |>
   geom_hline(yintercept = 530, color = '#698c86')  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
-  annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=530, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460)# +
+  annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=510, ymax=600) +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)# +
+# something fucking weird up with the arrows on this one 
 # these lines add text to the arrows (good for presentation, not for publication?)
 # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
 # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
 # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c3
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c3.png', height=4.5, width=6.5, units='in', res=500)
-c3
-dev.off()
+ggsave('Figures/Figure3/c3.png', height=3, width=5, units='in')
 
 
 # plot lakes that shifted from blue to greener
@@ -228,35 +223,42 @@ c4 <- trend_change |>
   geom_hline(yintercept = 530, color = '#698c86')  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
-  annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=530, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460)# +
+  annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=515, ymax=600) +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)# +
 # these lines add text to the arrows (good for presentation, not for publication?)
 # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
 # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
 # annotate('text', x = 1987, hjust = 0, y = 510, label = "blue", size = 3, angle = -90)
 c4
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/c4.png', height=4.5, width=6.5, units='in', res=500)
-c4
-dev.off()
+ggsave('Figures/Figure3/c4.png', height=3, width=5, units='in')
 
 # 5. Histograms of slopes in each category ####
 
 # histogram for first figure above - trending green to blue, no change
+
+q2 <- median((trend_no_change |>
+       filter(trend_cat == 'Green -> Bluer'))$lm_slope)
+
+q1 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Green -> Bluer'))$lm_slope, 0.25)
+
+q3 <- quantile((trend_no_change |>
+                  filter(trend_cat == 'Green -> Bluer'))$lm_slope, 0.75)
+
 h1 <- trend_no_change |>
   filter(trend_cat == 'Green -> Bluer') |>
   select(lagoslakeid, lm_slope) |>
   distinct() |>
   ggplot() +
   geom_histogram(aes(lm_slope), binwidth=0.1) +
+  geom_vline(xintercept = c(q1, q2, q3)) +
   theme_minimal() +
   labs(y='',x='') +
   xlim(-3.8, 2.5)
 h1
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h1.png', height=4.5, width=6.5, units='in', res=500)
-h1
-dev.off()
+
 
 # histogram for second figure above - shifted from green to blue
 h2 <- trend_change |>
@@ -270,9 +272,7 @@ h2 <- trend_change |>
   xlim(-4,2.5)
 h2
 
-png('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/h2.png', height=4.5, width=6.5, units='in', res=500)
-h2
-dev.off()
+
 
 # histogram for first figure above - trending blue to green, no change
 h3 <- trend_no_change |>
