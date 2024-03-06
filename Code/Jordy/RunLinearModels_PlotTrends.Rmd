@@ -4,7 +4,7 @@ author: "Jordan Von Eggers"
 date: "2023-10-18"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 # 0. Set up on Beartooth 
@@ -13,7 +13,7 @@ Request resources, move to directory, and load modules for R
 ssh jvonegge@beartooth.arcc.uwyo.edu
 cd /project/lakecolor/data
 
-salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=5:00:00
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
 
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.2.2
@@ -492,11 +492,30 @@ dev.off()
 
 
 
-# 3. Figure 1 PCA
+# 3. Figure 1 Map
 
+```{r}
+
+
+```
+
+# 3. Figure 1 PCA
 Did this in the super computer because was running SO slow on my computer
 
 Read in climate data, average, and merge with the trend dataset, and then with the landcover dataset
+
+Request resources, move to directory, and load modules for R
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+cd /project/lakecolor/data
+
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+R
+```
+
 ```{r}
 require(tidyverse)
 
@@ -521,7 +540,9 @@ table(prism_avg$obs_year_prism) # all have 39 years
 summary(prism_avg) # 2 NAs..
 
 # read in temporal trend data
-trends<-read.csv("../data_analysis/TEMPORAL_Avg_LMs/2023-12-05_TEMPORAL_Avg_LMs.csv", header=T, row.names=1)
+trends<-read.csv("../data_analysis/TEMPORAL_Avg_LMs/2023-12-11_TEMPORAL_Avg_LMs.csv", header=T, row.names=1)
+
+trends$X<-NULL
 
 trends_avg <- trends %>%
         group_by(lake_nhdid) %>%
@@ -553,11 +574,53 @@ landcover_avg <- landcover %>%
         ) %>%
         ungroup() %>%
         select(1,20:38) %>% # get rid of year and data from individual years
-        distinct()
+        distinct() 
+
+
+landcovered_avg_sum <- landcover_avg %>%
+        slice(1:5) %>%
+        rowwise() %>%
+        mutate(avg_nlcd_dev_pct = sum(
+                c(
+                        nlcd_devlow22_pct,
+                        nlcd_devhi24_pct,
+                        nlcd_devmed23_pct,
+                        nlcd_devopen21_pct
+                ))) %>%
+        mutate(avg_nlcd_dev_pct = sum(
+                c(
+                        nlcd_devlow22_pct,
+                        nlcd_devhi24_pct,
+                        nlcd_devmed23_pct,
+                        nlcd_devopen21_pct
+                )))
+
+  mutate(avg_nlcd_dev_pct = sum(across(contains("avg_nlcd_dev"), na.rm = TRUE), na.rm = TRUE))
+
+
+
 
 trends_prism_landcover <- inner_join(trends_prism,landcover_avg, by= join_by(lake_nhdid))
 dim(trends_prism_landcover)
 ```
+
+```{r}
+cormat<-cor(landcover[18:33])
+
+require(ggcorrplot)
+pdf("Landcover_correlation.pdf",height=10,width=10)
+ggcorrplot(cormat)
+dev.off()
+
+
+cormat<-cor(as.matrix(trends_avg[,4:14]))
+pdf("Landcover_correlation.pdf",height=10,width=10)
+ggcorrplot(cormat)
+dev.off()
+# change connectivity class 
+    
+```
+
 
 ```{r}
 require(tidyverse)
@@ -677,7 +740,7 @@ Look at the summary and decide how many PCAs you want to keep based on
 spc
 
 for (i in 1:9){
-print(paste0("Principe component",i))
+print(paste0("Principal component",i))
 print(pc$loadings[which(abs(pc$loadings[,i])>0.3),i])
 }
 
@@ -790,10 +853,6 @@ Multiple linear regression using our components
 ```{r}
 lake_color <-
 ```
-
-
-
-We want 
 
 
 
