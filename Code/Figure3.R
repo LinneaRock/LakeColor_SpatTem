@@ -10,7 +10,7 @@ library(grid)
 
 
 # below is our finalized dataset saved to Beartooth on 2023-12-11
-data <- read.csv('2023-12-11_Temporal_Avg_LMs.csv') |> 
+data <- read.csv('../2023-12-11_Temporal_Avg_LMs.csv') |> 
   # add in size group variable to delineate large vs small lakes
   mutate(size_group = ifelse(lake_waterarea_ha > 10,'large','small')) |>
   # add names of ecoregions
@@ -148,8 +148,7 @@ c1 <- trend_no_change |>
               axis.title.y=element_blank(),
               panel.grid.minor = element_blank(), 
               panel.grid.major.x = element_blank(),
-              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
-        ylim(450,650)
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))
 
 # +
 # these lines add text to the arrows (good for presentation, not for publication?)
@@ -185,8 +184,7 @@ c2 <- trend_change |>
               axis.title.y=element_blank(),
               panel.grid.minor = element_blank(), 
               panel.grid.major.x = element_blank(),
-              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
-        ylim(450,650)
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))
 
 # +
 # these lines add text to the arrows (good for presentation, not for publication?)
@@ -224,8 +222,7 @@ c3 <- trend_no_change |>
               axis.title.y=element_blank(),
               panel.grid.minor = element_blank(), 
               panel.grid.major.x = element_blank(),
-              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
-        ylim(450,650)
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))
 
 # +
 # something fucking weird up with the arrows on this one 
@@ -262,8 +259,7 @@ c4 <- trend_change |>
               panel.grid.minor = element_blank(), 
               panel.grid.major.x = element_blank(),
               plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
-        labs(y = '', x = '') +
-        ylim(450,650)
+        labs(y = '', x = '')
 
 # +
 # these lines add text to the arrows (good for presentation, not for publication?)
