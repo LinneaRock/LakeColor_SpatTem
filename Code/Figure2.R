@@ -134,11 +134,11 @@ data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Int
 p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat, pattern=trend_cat, pattern_color=trend_cat)) +
   geom_bar_pattern(stat = 'identity',position = position_stack(), width = 1, pattern_density=0.005) +
   #facet_grid(~ecoregion_abb) +
-  theme_classic()+
-  labs(y = "Percent of lakes in\n each trend category", x = NULL)+
+  theme_classic() +
+  labs(y = "Percent of lakes in\n each trend category", x = NULL) +
   scale_fill_manual('', values = trend_cols) +
   scale_pattern_manual(values=c('none','none','none','stripe','stripe','none','none', 'none')) +
-   scale_pattern_color_manual(values=c('none','none','none','green4','blue1','none','none', 'none')) +
+   scale_pattern_color_manual(values=c('none','none','none','#648555ff', '#3d7db0ff','none','none', 'none')) +
   facet_grid2(
     .~ecoregion_abb, 
     strip = strip_themed(
@@ -191,7 +191,7 @@ p2 <- ggplot() +
 
 p2
 
-ggsave('Figures/Figure1/p2.png',height=4.5, width=6.5, units='in', dpi=1200)
+ggsave('Figures/Figure2/p2.png',height=4.5, width=6.5, units='in', dpi=1200)
 
 
 # ecoregion figure for fig 1 of MS?
@@ -206,33 +206,39 @@ ggsave('Figures/ecoregions.png',height=4.5, width=6.5, units='in', dpi=1200)
 
 
 # 6. Part c of Figure 2 ####
-p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, fill = change)) +
-  geom_bar(stat = 'identity',position = position_stack(), width = 1) +
+p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, color=change, fill=change, pattern=change, pattern_color=change)) +
+  geom_bar_pattern(stat = 'identity',position = position_stack(), width = 1, pattern_density=0.0001, linewidth=1) +
+  #geom_bar(stat = 'identity',position = position_stack(), width = 1) +
   #facet_grid(~ecoregion_abb) +
   theme_classic()+
   labs(y = "No. of lakes that \n switched colors", x = NULL)+
-  scale_fill_manual('', values = c("#A2CD5A", "skyblue2")) +
-  geom_text(aes(label = n), check_overlap = TRUE,
-            position = position_stack(vjust=0.5), size=3) +
+  scale_color_manual('', values = c("skyblue2","#A2CD5A")) +
+  scale_fill_manual('', values = c("skyblue2","#A2CD5A")) +
+  scale_pattern_manual(values=c('stripe','stripe')) +
+  scale_pattern_color_manual(values=c('#648555ff', '#3d7db0ff')) +
+  # geom_text(aes(label = n), check_overlap = TRUE,
+  #           position = position_stack(vjust=0.5), size=3) +
   facet_grid2(
     .~ecoregion_abb, 
     strip = strip_themed(
-      background_x = list(element_rect(color = ecoreg_cols[1], size =2),
-                          element_rect(color = ecoreg_cols[2], size =2),
-                          element_rect(color = ecoreg_cols[3], size =2),
-                          element_rect(color = ecoreg_cols[4], size =2),
-                          element_rect(color = ecoreg_cols[5], size =2),
-                          element_rect(color = ecoreg_cols[6], size =2),
-                          element_rect(color = ecoreg_cols[7], size =2),
-                          element_rect(color = ecoreg_cols[8], size =2),
-                          element_rect(color = ecoreg_cols[9], size =2))
+      background_x = list(element_rect(color = ecoreg_cols[1], linewidth=2),
+                          element_rect(color = ecoreg_cols[2], linewidth=2),
+                          element_rect(color = ecoreg_cols[3], linewidth=2),
+                          element_rect(color = ecoreg_cols[4], linewidth=2),
+                          element_rect(color = ecoreg_cols[5], linewidth=2),
+                          element_rect(color = ecoreg_cols[6], linewidth=2),
+                          element_rect(color = ecoreg_cols[7], linewidth=2),
+                          element_rect(color = ecoreg_cols[8], linewidth=2),
+                          element_rect(color = ecoreg_cols[9], linewidth=2))
     )
   ) +
-  theme(legend.position = c(0.25, 0.75))
+  #theme(legend.position = c(0.25, 0.75))
+  theme(legend.position='none',
+        strip.background = element_blank(), strip.text = element_blank())
 
 p3
 
-ggsave('Figures/Figure1/p3.png', height=4.5, width=6.5, units='in',dpi=1200)
+ggsave('Figures/Figure2/p3.png', height=4.5, width=6.5, units='in',dpi=1200)
 
 # 7. Part d of Figure 2 ####
 # transform our real change data to sf object
@@ -242,7 +248,7 @@ real_change.sf <- st_as_sf(real_change, coords = c('lake_lon_decdeg', 'lake_lat_
 p4 <- ggplot() +
   geom_sf(data = regions.sf, fill = 'white') +
   geom_sf(data = real_change.sf, aes(color=change)) +
-  scale_color_manual('',values = c("#A2CD5A", "skyblue2")) +
+  scale_color_manual('',values = c('#93c47dff', '#3d7db0ff')) +
   theme_bw()+
   labs(x = '', y= '') +
   theme_minimal() +
@@ -260,10 +266,13 @@ p4 <- ggplot() +
 
 p4
 
-ggsave('Figures/Figure1/p4.png', height=4.5, width=6.5, units='in', dpi=1200)
+ggsave('Figures/Figure2/p4.png', height=4.5, width=6.5, units='in', dpi=1200)
 
 
 p1/p3 + plot_annotation(tag_levels = 'a', tag_suffix = ')')
 
-ggsave('Figures/Figure1/a_b.png', height=6, width=8, units='in', dpi=1200)
+ggsave('Figures/Figure2/a_b.png', height=6, width=8, units='in', dpi=1200)
+
+
+
 
