@@ -10,7 +10,7 @@ library(grid)
 
 
 # below is our finalized dataset saved to Beartooth on 2023-12-11
-data <- read.csv('Data/2023-12-11_Temporal_Avg_LMs.csv') |> 
+data <- read.csv('2023-12-11_Temporal_Avg_LMs.csv') |> 
   # add in size group variable to delineate large vs small lakes
   mutate(size_group = ifelse(lake_waterarea_ha > 10,'large','small')) |>
   # add names of ecoregions
@@ -99,8 +99,8 @@ hexcols <- tibble(
 #              vp=viewport(xs=c(0.15, -0.15), ys=c(5, -5)))
 # dev.off()
 
-mup <- readPNG("maskup.png", native=FALSE)
-mdown <- readPNG('maskdown.png', native = FALSE)
+mup <- readPNG("LakeColor_SpatTem/maskup.png", native=FALSE)
+mdown <- readPNG('LakeColor_SpatTem/maskdown.png', native = FALSE)
 maskup <- matrix(rgb(mup[,,1],mup[,,2],mup[,,3]),
                  nrow=nrow(mup))
 maskdown <- matrix(rgb(mdown[,,1],mdown[,,2],mdown[,,3]),
@@ -133,15 +133,25 @@ c1 <- trend_no_change |>
   geom_line(aes(year, avg_dwl_year, group = lagoslakeid), 
             color = 'grey', alpha= 0.25) +
   # add average trend line
-  geom_line(aes(year, Nat_avgdwl_year)) +
+  geom_line(aes(year, Nat_avgdwl_year), linewidth=2) +
   theme_bw() +
-  labs(x = '', y = 'Dominant wavelength') +
+  labs(x = '', y = '') +
   # add line for color shift threshold
-  geom_hline(yintercept = 530, color = '#698c86')  +
+  geom_hline(yintercept = 530, color = '#698c86', linewidth=2)  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
   annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=530, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460)# +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460) +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.title=element_text(size=15), #change font size of all text
+              axis.text.x = element_blank(),
+              axis.title.y=element_blank(),
+              panel.grid.minor = element_blank(), 
+              panel.grid.major.x = element_blank(),
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
+        ylim(450,650)
+
+# +
 # these lines add text to the arrows (good for presentation, not for publication?)
   # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
   # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
@@ -160,15 +170,25 @@ c2 <- trend_change |>
   geom_line(aes(year, avg_dwl_year, group = lagoslakeid), 
             color = 'grey', alpha= 0.25) +
   # add average trend line
-  geom_line(aes(year, Nat_avgdwl_year)) +
+  geom_line(aes(year, Nat_avgdwl_year), linewidth=2) +
   theme_bw() +
-  labs(x = '', y = 'Dominant wavelength') +
+  labs(x = '', y = '') +
   # add line for color shift threshold
-  geom_hline(yintercept = 530, color = '#698c86')  +
+  geom_hline(yintercept = 530, color = '#698c86', linewidth=2)  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
   annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=530, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460)# +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=460) +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.title=element_text(size=15), #change font size of all text
+              axis.text.x = element_blank(),
+              axis.title.y=element_blank(),
+              panel.grid.minor = element_blank(), 
+              panel.grid.major.x = element_blank(),
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
+        ylim(450,650)
+
+# +
 # these lines add text to the arrows (good for presentation, not for publication?)
 # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
 # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
@@ -189,15 +209,25 @@ c3 <- trend_no_change |>
   geom_line(aes(year, avg_dwl_year, group = lagoslakeid), 
             color = 'grey', alpha= 0.25) +
   # add average trend line
-  geom_line(aes(year, Nat_avgdwl_year)) +
+  geom_line(aes(year, Nat_avgdwl_year), linewidth=2) +
   theme_bw() +
-  labs(x = '', y = 'Dominant wavelength') +
+  labs(x = '', y = '') +
   # add line for color shift threshold
-  geom_hline(yintercept = 530, color = '#698c86')  +
+  geom_hline(yintercept = 530, color = '#698c86', linewidth=2)  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
   annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=510, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)# +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)+
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.title=element_text(size=15), #change font size of all text
+              axis.text.x = element_blank(),
+              axis.title.y=element_blank(),
+              panel.grid.minor = element_blank(), 
+              panel.grid.major.x = element_blank(),
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
+        ylim(450,650)
+
+# +
 # something fucking weird up with the arrows on this one 
 # these lines add text to the arrows (good for presentation, not for publication?)
 # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
@@ -216,15 +246,26 @@ c4 <- trend_change |>
   geom_line(aes(year, avg_dwl_year, group = lagoslakeid), 
             color = 'grey', alpha= 0.25) +
   # add average trend line
-  geom_line(aes(year, Nat_avgdwl_year)) +
+  geom_line(aes(year, Nat_avgdwl_year), linewidth=2) +
   theme_bw() +
   labs(x = '', y = 'Dominant wavelength') +
   # add line for color shift threshold
-  geom_hline(yintercept = 530, color = '#698c86')  +
+  geom_hline(yintercept = 530, color = '#698c86', linewidth=2)  +
   # add arrows
   scale_x_continuous(expand = c(0,0)) +
   annotation_custom(rasterGrob(rmatbrown), xmin = -Inf, xmax=1990, ymin=515, ymax=600) +
-  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)# +
+  annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=545, ymax=460)+
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.title=element_text(size=15), #change font size of all text
+              axis.title.y=element_blank(),
+              axis.title.x=element_text(color="black",size=15),
+              panel.grid.minor = element_blank(), 
+              panel.grid.major.x = element_blank(),
+              plot.margin = margin(0.5,0.5, 0, 0, "cm"))+
+        labs(y = '', x = '') +
+        ylim(450,650)
+
+# +
 # these lines add text to the arrows (good for presentation, not for publication?)
 # annotate('text', x = 1987, hjust=0, y = 540, label = "green/\nbrown", size = 3, angle = 90) +
 # annotation_custom(rasterGrob(rmatblue), xmin = -Inf, xmax=1990, ymin=530, ymax=450) +
@@ -251,13 +292,20 @@ h1 <- trend_no_change |>
   distinct() |>
   ggplot() +
   geom_histogram(aes(lm_slope), binwidth=0.05) +
-  geom_vline(xintercept = c(q1, q2, q3), color = "#A2CD5A") +
-  theme_minimal() +
+        geom_vline(xintercept = 0, color = "black", linewidth=1.5) +
+        geom_vline(xintercept = c(q1, q3), color = "#759e72", linetype = "dashed",linewidth=1.3) +
+        geom_vline(xintercept =  q2, color = "#759e72",linewidth=1.7)+
+        theme_bw() +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.text.x = element_blank(),
+              axis.ticks.x = element_line(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major.x = element_blank())+
   labs(y='',x='') +
-  xlim(-3.8, 2.5)
+  xlim(-3, 2.5)
 h1
 
-
+ggsave('Figures/Figure3/h1.png', height=3, width=5.5, units='in')
 
 # histogram for second figure above - shifted from green to blue
 q2 <- quantile((trend_change |>
@@ -275,11 +323,20 @@ h2 <- trend_change |>
   distinct() |>
   ggplot() +
   geom_histogram(aes(lm_slope), binwidth=0.05) +
-  geom_vline(xintercept = c(q1, q2, q3), color = "blue1") +
-  theme_minimal() +
+        geom_vline(xintercept = 0, color = "black", linewidth=1.5) +
+        geom_vline(xintercept = c(q1, q3), color = "#327cbb", linetype = "dashed", linewidth=1.3) +
+        geom_vline(xintercept =  q2, color = "#327cbb",linewidth=1.7)+
+        theme_bw() +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.text.x = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major.x = element_blank())+
   labs(y='',x='') +
-  xlim(-4,2.5)
+  xlim(-3,2.5)
 h2
+
+ggsave('Figures/Figure3/h2.png', height=3, width=5.5, units='in')
+
 
 
 
@@ -299,12 +356,18 @@ h3 <- trend_no_change |>
   distinct() |>
   ggplot() +
   geom_histogram(aes(lm_slope),binwidth=0.05) +
-  geom_vline(xintercept = c(q1, q2, q3), color = "skyblue2") +
-  theme_minimal() +
+        geom_vline(xintercept = 0, color = "black", linewidth=1.5) +
+        geom_vline(xintercept = c(q1, q3), color = "#568f96", linetype = "dashed", linewidth=1.3) +
+        geom_vline(xintercept =  q2, color = "#568f96",linewidth=1.7)+
+        theme_bw() +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              axis.text.x = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major.x = element_blank())+
   labs(y='',x='') +
-  xlim(-4,2.5)
+  xlim(-3,2.5)
 h3
-
+ggsave('Figures/Figure3/h3.png', height=3, width=5.5, units='in')
 
 
 # histogram for fourth figure above - shifted from blue to green
@@ -323,19 +386,20 @@ h4 <- trend_change |>
   distinct() |>
   ggplot() +
   geom_histogram(aes(lm_slope),binwidth=0.05) +
-  geom_vline(xintercept = c(q1, q2, q3), color = "green4") +
-  theme_minimal() +
-  labs(y='',x='') +
-  xlim(-4,2.5)
+        geom_vline(xintercept = 0, color = "black", linewidth=1.5) +
+        geom_vline(xintercept = c(q1, q3), color = "#94b660", linetype = "dashed", linewidth=1.3) +
+        geom_vline(xintercept =  q2, color = "#94b660", linewidth=1.7)+
+        theme_bw() +
+        theme(axis.text=element_text(color="black",size=15), # make all font black
+              panel.grid.minor = element_blank(), 
+              panel.grid.major.x = element_blank(),
+              axis.title.x=element_text(color="black",size=15)) +
+        labs(y='',x='') +
+  xlim(-3,2.5)
 h4
 
+ggsave('Figures/Figure3/h4.png', height=3, width=5.5, units='in')
 
-
-library(patchwork)
-h1/h2/h3/h4
-
-
-ggsave('Figures/Figure3/hists.png', height=6, width =3, units='in', dpi=1200)
 
 
 
