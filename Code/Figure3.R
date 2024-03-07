@@ -99,8 +99,8 @@ hexcols <- tibble(
 #              vp=viewport(xs=c(0.15, -0.15), ys=c(5, -5)))
 # dev.off()
 
-mup <- readPNG("LakeColor_SpatTem/maskup.png", native=FALSE)
-mdown <- readPNG('LakeColor_SpatTem/maskdown.png', native = FALSE)
+mup <- readPNG("maskup.png", native=FALSE)
+mdown <- readPNG('maskdown.png', native = FALSE)
 maskup <- matrix(rgb(mup[,,1],mup[,,2],mup[,,3]),
                  nrow=nrow(mup))
 maskdown <- matrix(rgb(mdown[,,1],mdown[,,2],mdown[,,3]),
