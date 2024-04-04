@@ -4,14 +4,14 @@ author: "Jordan Von Eggers"
 date: "2023-10-18"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 # 0. Set up on Beartooth 
 Request resources, move to directory, and load modules for R
 ```{bash}
 ssh jvonegge@beartooth.arcc.uwyo.edu
-cd /project/lakecolor/data
+cd /project/lakecolor/data_analysis
 
 salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
 
@@ -834,7 +834,6 @@ psych::pairs.panels(X,
              ellipses=F,
              ci=F)
 dev.off()
-
 ```
 
 ### - decide how many PCs
@@ -1091,12 +1090,135 @@ dev.off()
 
 ```
 
+
+
+## c. NMDS
+```{r}
+require(vegan)
+require(cluster)
+require(phyloseq)
+daisy.mat <- as.matrix(daisy(scale(X), metric="gower"))
+nmds<-metaMDS(X,distance = "bray",)
+
+```
+
+# distribution of data
+
+
+pairs.panel.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name pairs_panel
+#SBATCH --mem=100GB
+#SBATCH --time=1-00:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=microbiome
+#SBATCH --output=pairs_panel_%A.out
+
+cd /project/lakecolor/data_analysis/X_Y_distributions
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+
+srun Rscript make_pairs_panels.R
+date
+```
+
+
+make_pairs_panels.R
+```{r}
+load("../../data/2024-03-07_Trends_Prism_Landcover.Rdata")
+
+require(psych)
+require(tidyverse)
+
+X_N <- rownames_to_column(X, var = "rownames")
+Y_N <- rownames_to_column(Y, var = "rownames")
+lake_color <- inner_join(X_N,Y_N,by="rownames") %>% 
+        select(-c(trend_cat,trend_cat_switch,lm_slope)) %>%
+               column_to_rownames(var = "rownames") %>%
+        select(avg_dwl_site, everything()) 
+
+jpeg(paste0(Sys.Date(),"_PairsPanel.pdf"), height=20,width=20,units="in", res=500)
+pairs.panels(lake_color,ellipses = F,digits = 3,hist.col = "lightgreen")
+dev.off()
+
+```
+
+Shapiro-Wilk normality
+mbox text
+
+```
+
+
+
+# cluster
+Do this in Beartooth since such a large dataset
+
+```{bash}
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=2:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+R
+```
+
+```{r}
+load("../../data/2024-03-07_Trends_Prism_Landcover.Rdata")
+
+d<-dist(X, method="euclidean")
+n=nrow(X); p=ncol(X)
+
+R=cor(X); 
+R<-round(R,4)
+write.csv(R,paste0(Sys.date(), "_correlation_predcitors.csv"))
+
+```
+
+
 # random forest
+
+```{r}
+require(randomForest)
+require(tidyverse)
+devtools::install_github("araastat/reprtree")
+require(reprtree)
+
+load("../../data/2024-03-07_Trends_Prism_Landcover.Rdata")
+
+
+set.seed(675)
+X_N <- rownames_to_column(X, var = "rownames")
+Y_N <- rownames_to_column(Y, var = "rownames")
+lake_color <- inner_join(X_N,Y_N,by="rownames") %>% 
+        select(-c(trend_cat,avg_dwl_site,lm_slope)) %>%
+               column_to_rownames(var = "rownames") %>%
+        select(trend_cat_switch, everything()) %>%
+        mutate(trend_cat_switch=as.factor(trend_cat_switch))
+
+fit.rF<-randomForest(trend_cat_switch~.,data=lake_color, mtry=sqrt(22))
+
+pdf("Random_Forest_varimpplot.pdf", height=5,width=5)
+varImpPlot(fit.rF)
+dev.off()
+
+
+pdf("Random_Forest_errorvstrees.pdf", height=5,width=5)
+plot(fit.rF, lwd=2)
+dev.off()
+
+pdf("Random_Forest_trees.pdf", height=10,width=10)
+plot.getTree(fit.rF)
+dev.off()
+
+save.image(paste0(Sys.Date(),"_RandomForestModel.Rdata"))
+
+```
+
 
 # neural network
 
 ```{r}
-load("../../../2024-03-07_Trends_Prism_Landcover.rdata")
+load("/../../../2024-03-07_Trends_Prism_Landcover.rdata")
 
 require(nnet)
 require(tidyverse)
