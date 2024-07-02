@@ -55,13 +55,24 @@ ecoreg_cols <- c(
   "#FB9A99")     # Xeric
 
 
+# trend_cols <- c("blue1",       # Intensifying Blue,
+#                 "#E0EEEE",     # No trend - Blue
+#                 "skyblue2",    # Blue -> Greener
+#                 "skyblue2",    # Lake became green -- add stripes
+#                 "#A2CD5A",     # lake became blue -- add stripes
+#                 "#A2CD5A",     # Green -> Bluer
+#                 "#C1FFC1",     # No trend - Green/brown
+#                 "green4")      # Intensifying Green/brown
+
+# re-org these for easier to read legend/figure
 trend_cols <- c("blue1",       # Intensifying Blue,
+                "skyblue2",    # Lake became blue -- add green stripes
+                '#3d7db0ff',    # Blue -> Greener (stayed blue)
                 "#E0EEEE",     # No trend - Blue
-                "skyblue2",    # Blue -> Greener
-                "skyblue2",    # Lake became green -- add stripes
-                "#A2CD5A",     # lake became blue -- add stripes
-                "#A2CD5A",     # Green -> Bluer
+                
                 "#C1FFC1",     # No trend - Green/brown
+                '#348555ff',     # Green -> Bluer (stayed green)
+                "#A2CD5A",     # lake became green -- add blue stripes
                 "green4")      # Intensifying Green/brown
 
 
@@ -94,6 +105,8 @@ real_change <- color_change_data |>
 
 
 Change_Tally_Ecoregion <- real_change |>
+  select(change,ecoregion_name,ecoregion_abb, lagoslakeid, lm_slope) |>
+  distinct() |>
   group_by(change, ecoregion_name, ecoregion_abb) |>
   reframe(n = n(),
           mean_slope = mean(lm_slope))|>
@@ -127,7 +140,7 @@ data_tally_ecoreg <- data |>
 
 
 # factor for pretty colors
-data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Intensifying Blue","No trend - Blue","Blue -> Greener", 'Lake became green', 'Lake became blue', "Green -> Bluer", "No trend - Green/brown","Intensifying Green/brown"))
+data_tally_ecoreg$trend_cat <- factor(data_tally_ecoreg$trend_cat, levels=c("Intensifying Blue",'Lake became blue', "Blue -> Greener","No trend - Blue", "No trend - Green/brown", "Green -> Bluer",'Lake became green', "Intensifying Green/brown"))
 
 
 # 4. Part a of Figure 2 ####
@@ -137,8 +150,8 @@ p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat, pattern=tren
   theme_classic() +
   labs(y = "Percent of lakes in\n each trend category", x = NULL) +
   scale_fill_manual('', values = trend_cols) +
-  scale_pattern_manual(values=c('none','none','none','stripe','stripe','none','none', 'none')) +
-   scale_pattern_color_manual(values=c('none','none','none','#648555ff', '#3d7db0ff','none','none', 'none')) +
+  scale_pattern_manual(values=c('none','stripe','none','none','none','none','stripe', 'none')) +
+   scale_pattern_color_manual(values=c('none','#348555ff','none','none','none','none', '#3d7db0ff','none')) +
   facet_grid2(
     .~ecoregion_abb, 
     strip = strip_themed(
@@ -157,7 +170,7 @@ p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat, pattern=tren
 
 p1 
 
-ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1.png',height=4.5, width=6.5, units='in', dpi=1200)
+ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/p1.png',height=4.5, width=6.5, units='in', dpi=1200)
 
 # make simple one just for legend
 ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
@@ -165,7 +178,7 @@ ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat)) +
   theme_minimal() +
   scale_fill_manual('', values = trend_cols) 
 
-ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure1/p1_legend.png',height=4.5, width=6.5, units='in', dpi=1200)
+ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/p1_legend.png',height=4.5, width=6.5, units='in', dpi=1200)
 
 
 # 5. Part b of Figure 2 ####
@@ -212,10 +225,10 @@ p3 <- ggplot(Change_Tally_Ecoregion, aes(' ', n, color=change, fill=change, patt
   #facet_grid(~ecoregion_abb) +
   theme_classic()+
   labs(y = "No. of lakes that \n switched colors", x = NULL)+
-  scale_color_manual('', values = c("skyblue2","#A2CD5A")) +
-  scale_fill_manual('', values = c("skyblue2","#A2CD5A")) +
+  scale_color_manual('', values = c("#A2CD5A","skyblue2")) +
+  scale_fill_manual('', values = c("#A2CD5A","skyblue2")) +
   scale_pattern_manual(values=c('stripe','stripe')) +
-  scale_pattern_color_manual(values=c('#648555ff', '#3d7db0ff')) +
+  scale_pattern_color_manual(values=c('#3d7db0ff','#348555ff')) +
   # geom_text(aes(label = n), check_overlap = TRUE,
   #           position = position_stack(vjust=0.5), size=3) +
   facet_grid2(
@@ -248,7 +261,7 @@ real_change.sf <- st_as_sf(real_change, coords = c('lake_lon_decdeg', 'lake_lat_
 p4 <- ggplot() +
   geom_sf(data = regions.sf, fill = 'white') +
   geom_sf(data = real_change.sf, aes(color=change)) +
-  scale_color_manual('',values = c('#93c47dff', '#3d7db0ff')) +
+  scale_color_manual('',values = c("#A2CD5A","skyblue2"))+ 
   theme_bw()+
   labs(x = '', y= '') +
   theme_minimal() +
