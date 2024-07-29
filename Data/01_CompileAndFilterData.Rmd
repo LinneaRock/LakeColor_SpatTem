@@ -1,0 +1,48 @@
+---
+title: "Untitled"
+author: "Jordan Von Eggers"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# load packages
+```{r}
+library(tidyverse)
+library(sf)
+library(nhdplusTools)
+library(USAboundaries)
+```
+
+
+# subset Limnosat lakes > 10 ha for Georgia and Texas
+```{r, eval = F, warning = F}
+## Read in the geospatial data
+# Lakes
+lakes <- st_read('Data/HydroLakes_DP.shp') %>%
+  st_centroid() %>%
+  filter(type == 'dp') # Grab only deepest point data
+
+#Get Texas and Georgia outlines
+tx_ga <- us_states() %>%
+  filter(state_abbr %in% c('TX', 'GA')) %>%
+  st_transform(st_crs(lakes))
+
+# With elevation data
+tx_ga_lakes <- lakes[tx_ga,] 
+
+
+write.csv(tx_ga_lakes, "Data/tx_ga_lakes.csv")
+
+
+#LimnoSat color information
+ls_tx_ga <- read_csv('srCorrected_us_hydrolakes_dp_20200628.csv') %>%
+  filter(Hylak_id %in% tx_ga_lakes$Hylak_id) %>%
+  inner_join(tx_ga_lakes %>% 
+               as.data.frame(.) %>%
+               select(-geometry) %>%
+               select(Hylak_id,elevation))
+
+save(ls_tx_ga, tx_ga_lakes, fui.lookup, fui.colors, file = 'data/ls_elev.RData')
+```
