@@ -20,29 +20,139 @@ library(USAboundaries)
 ```{r, eval = F, warning = F}
 ## Read in the geospatial data
 # Lakes
-lakes <- st_read('Data/HydroLakes_DP.shp') %>%
+lakes <- st_read('Data/HydroLakes/HydroLakes_DP.shp') %>%
   st_centroid() %>%
   filter(type == 'dp') # Grab only deepest point data
+ggplot() +
+  geom_sf(lakes, mapping=aes(), size=0.5)
 
 #Get Texas and Georgia outlines
 tx_ga <- us_states() %>%
   filter(state_abbr %in% c('TX', 'GA')) %>%
   st_transform(st_crs(lakes))
 
-# With elevation data
+ggplot() +
+  geom_sf(tx_ga, mapping=aes())
+
+
 tx_ga_lakes <- lakes[tx_ga,] 
+ggplot() +
+  geom_sf(tx_ga_lakes, mapping=aes(),size=0.5)
 
-
-write.csv(tx_ga_lakes, "Data/tx_ga_lakes.csv")
+ggplot() +
+  geom_sf(lakes, mapping=aes(), color='grey') +
+  geom_sf(tx_ga_lakes, mapping=aes(), color='red')
 
 
 #LimnoSat color information
-ls_tx_ga <- read_csv('srCorrected_us_hydrolakes_dp_20200628.csv') %>%
+ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_20200628.csv") %>%
+ # mutate(Hylak_id = as.character(Hylak_id)) |>
   filter(Hylak_id %in% tx_ga_lakes$Hylak_id) %>%
   inner_join(tx_ga_lakes %>% 
                as.data.frame(.) %>%
                select(-geometry) %>%
-               select(Hylak_id,elevation))
+               select(Hylak_id))
 
-save(ls_tx_ga, tx_ga_lakes, fui.lookup, fui.colors, file = 'data/ls_elev.RData')
+#save(ls_tx_ga, tx_ga_lakes, file = 'data/ls_elev.RData')
+
+length(unique(tx_ga_lakes$Hylak_id))
+# 2495
+  
+
 ```
+
+
+### Join to NHD features
+
+```{r, eval = F}
+
+singular_fetch <- function(index = 1){
+  
+  wbd <- try(get_waterbodies(tx_ga_lakes[index,]), silent = T)
+  
+  if(length(class(wbd)) == 1){
+    wbd <- NULL
+  } else {
+    wbd <- wbd %>%
+      dplyr::select(comid:onoffnet,meandepth,maxdepth) %>%
+      mutate(onoffnet = as.character(onoffnet),
+             meandepth = as.numeric(meandepth),
+             maxdepth = as.numeric(maxdepth))
+  }
+  
+  return(wbd)
+}
+
+full_fetch <- map(1:nrow(tx_ga_lakes),singular_fetch)
+
+
+
+full_nhd <- do.call('rbind',full_fetch)
+
+
+definitely_lakes <- tx_ga_lakes[full_nhd,] 
+
+
+
+
+
+nhd_hylak_duplicated <- st_join(definitely_lakes,
+                     full_nhd )
+#Remove lakes that join to multiple NHDs. Impossible to resolve which numbers to take
+#from lake cat
+
+table(table(nhd_hylak_duplicated$Hylak_id)>1)
+length(unique(nhd_hylak_duplicated$comid))
+
+
+nhd_dupes <- nhd_hylak_duplicated %>%
+  as.data.frame() %>%
+  select(-geometry) %>%
+  count(Hylak_id) %>%
+  filter(n > 1)
+
+nhd_hylak <- nhd_hylak_duplicated %>%
+  filter(!Hylak_id %in% nhd_dupes$Hylak_id) |>
+  left_join(ls_tx_ga, join_by(Hylak_id)) |>
+  as.data.frame() |>
+  select(Hylak_id, comid, LandsatID, date, year, dWL)
+  
+
+rm(list=setdiff(ls(), c('nhd_hylak')))
+
+
+lake_link <- readRDS('Data/lake_link.RDS') |>
+  drop_na(nhdplusv2_comid) |>
+  distinct(lagoslakeid, nhdplusv2_comid, .keep_all = T) |>
+  mutate(nhdplusv2_comid=as.character(nhdplusv2_comid))
+head(lake_link)
+
+class(lake_link$nhdplusv2_comid)
+class(nhd_hylak$comid)
+length(unique(lake_link$lake_nhdid))
+
+nhd_hylak$comid <- as.character(nhd_hylak$comid)
+table(table(nhd_hylak$comid)>1))
+length(unique(nhd_hylak$comid))
+
+tx_ga_limnosat_nhdid <- left_join(nhd_hylak, lake_link, by=c('comid'='nhdplusv2_comid')) |>
+  select(-comid) |>
+  distinct()
+
+checklakes <- tx_ga_limnosat_nhdid |>
+  select(Hylak_id, lagoslakeid, lake_nhdid) |>
+  distinct() |>
+  drop_na()
+
+table(nhd_hylak$comid %in% lake_link$nhdplusv2_comid)
+
+length(unique(lake_link$lake_nhdid))
+length(unique(lake_link$nhdplusv2_comid))
+
+which(table(lake_link$lake_nhdid)>1)==T
+
+dup<-table(lake_link$lake_nhdid)>1
+
+```
+
+
