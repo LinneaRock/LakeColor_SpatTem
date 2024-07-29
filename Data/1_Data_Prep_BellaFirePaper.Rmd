@@ -16,7 +16,7 @@ library(sf)
 library(feather)
 library(lubridate)
 library(mapview)
-library(USAboundaries)
+
 library(s2)
 library(elevatr)
 library(trend)
@@ -27,6 +27,14 @@ library(nhdplusTools)
 
 sf_use_s2(use_s2 = T)
 knitr::opts_chunk$set(echo = TRUE, warning = F, comment = F, message = F)
+
+require(tidyverse)
+library(sf)
+library(nhdplusTools)
+library(USAboundaries)
+
+install.packages("nhdplusTools")
+remotes::install_github("DOI-USGS/nhdplusTools")
 ```
 
 #  LimnoSat-US Download and Filtering
@@ -78,136 +86,35 @@ rm(ls.url, ls.urls, meta.url, urls, files,)
 ```{r, eval = F, warning = F}
 ## Read in the geospatial data
 # Lakes
-lakes <- st_read('data/LimnoSat/HydroLakes_DP.shp') %>%
+lakes <- st_read('Data/HydroLakes_DP.shp') %>%
   st_centroid() %>%
   filter(type == 'dp') # Grab only deepest point data
 
-#Get colorado outline
-co <- us_states() %>%
-  filter(state_abbr %in% c('CO','WY','MT','ID','UT','NM')) %>%
+#Get Texas and Georgia outlines
+tx_ga <- us_states() %>%
+  filter(state_abbr %in% c('TX', 'GA')) %>%
   st_transform(st_crs(lakes))
 
 # With elevation data
-co_lakes <- lakes[co,]  %>%
-  get_elev_point(.)
-
-## FUI - Create Forel-Ule Color table
-
-#Connect dWL to the forel ule index for visualization
-#The Forel-Ule Index (FUI) is a useful comprehensive indicator to show the water colour variability and water quality change in both inland waters and oceans.
-fui.lookup <- tibble(dWL = c(471:583), fui = NA)
-fui.lookup$fui[fui.lookup$dWL <= 583] = 21
-fui.lookup$fui[fui.lookup$dWL <= 581] = 20
-fui.lookup$fui[fui.lookup$dWL <= 579] = 19
-fui.lookup$fui[fui.lookup$dWL <= 577] = 18
-fui.lookup$fui[fui.lookup$dWL <= 575] = 17
-fui.lookup$fui[fui.lookup$dWL <= 573] = 16
-fui.lookup$fui[fui.lookup$dWL <= 571] = 15
-fui.lookup$fui[fui.lookup$dWL <= 570] = 14
-fui.lookup$fui[fui.lookup$dWL <= 569] = 13
-fui.lookup$fui[fui.lookup$dWL <= 568] = 12
-fui.lookup$fui[fui.lookup$dWL <= 567] = 11
-fui.lookup$fui[fui.lookup$dWL <= 564] = 10
-fui.lookup$fui[fui.lookup$dWL <= 559] = 9
-fui.lookup$fui[fui.lookup$dWL <= 549] = 8
-fui.lookup$fui[fui.lookup$dWL <= 530] = 7
-fui.lookup$fui[fui.lookup$dWL <= 509] = 6
-fui.lookup$fui[fui.lookup$dWL <= 495] = 5
-fui.lookup$fui[fui.lookup$dWL <= 489] = 4
-fui.lookup$fui[fui.lookup$dWL <= 485] = 3
-fui.lookup$fui[fui.lookup$dWL <= 480] = 2
-fui.lookup$fui[fui.lookup$dWL <= 475 & fui.lookup$dWL >470] = 1
+tx_ga_lakes <- lakes[tx_ga,] 
 
 
-# Actual Forel-Ule Colors
-fui.colors <- tibble(color = c(
-  "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
-  "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
-  "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04"),
-  fui = 1:21)
-fui.colors$dWL_ranges <- c("470-475",
-                          "475-480",
-                          "480-485",
-                          "485-489",
-                          "489-495",
-                          "495-509",
-                          "509-530",
-                          "530-549",
-                          "549-559",
-                          "559-564",
-                          "564-567",
-                          "567-568",
-                          "568-569",
-                          "569-570",
-                          "570-571",
-                          "571-573",
-                          "573-575",
-                          "575-577",
-                          "577-579",
-                          "579-581",
-                          "581-583")
+write.csv(tx_ga_lakes, "Data/tx_ga_lakes.csv")
 
 
 #LimnoSat color information
-ls_co <- read_feather('data/LimnoSat/LimnoSat_20200628.feather') %>%
-  filter(Hylak_id %in% co_lakes$Hylak_id) %>%
-  inner_join(co_lakes %>% 
+ls_tx_ga <- read_csv('srCorrected_us_hydrolakes_dp_20200628.csv') %>%
+  filter(Hylak_id %in% tx_ga_lakes$Hylak_id) %>%
+  inner_join(tx_ga_lakes %>% 
                as.data.frame(.) %>%
                select(-geometry) %>%
-               select(Hylak_id,elevation)) %>%
-  left_join(fui.lookup) %>%
-  left_join(fui.colors)
+               select(Hylak_id,elevation))
 
 
 
 
 
-save(ls_co, co_lakes, fui.lookup, fui.colors, file = 'data/ls_elev.RData')
-```
-
-
-I blame COVID, but I can't think through how to do this data prep only once.
-The populations of lakes for the median modern distribution and the trend lakes
-are different, so they need to be prepped twice, which feels wasteful and insane,
-but not sure how else to do it. 
-
-
-# Blue vs. Green Lake Distributions
-
-
-## Modern Blue/Green Data Prep
-
-
-```{r}
-load('data/ls_elev.RData')
-
-#Grab modern decade median color
-co_summary_median <- ls_co %>%
-  dplyr::select(-year, -sat) %>%
-  mutate(month = month(date),
-         year = year(date),
-         doy = yday(date)) %>%
-  filter(month %in% 7:9, 
-         doy <= 258, #Sept 14/15
-         year >= 2009,
-         elevation > 1400) %>% 
-  group_by(Hylak_id) %>%
-  add_count() %>%
-  filter(n >= 30) %>%
-  group_by(Hylak_id) %>%
-  summarize(across(c(Blue:dWL),
-                   .fns = list(mean = mean, 
-                               sd = sd, 
-                               max = max,
-                               min = min,
-                               median = median), na.rm = T,
-                   .names = "{.col}-{.fn}"))%>% 
-  ungroup() %>%
-  pivot_longer(cols = `Blue-mean`:`dWL-median`,
-               names_to = c('var','stat'),
-               names_sep = '-')
-## I copied this code into 2_GreenBlueMedians.Rmd - IAO 
-
+save(ls_tx_ga, tx_ga_lakes, fui.lookup, fui.colors, file = 'data/ls_elev.RData')
 ```
 
 
@@ -215,8 +122,8 @@ co_summary_median <- ls_co %>%
 
 ```{r, eval = F}
 
-likely_lakes <- co_lakes %>%
-  filter(Hylak_id %in% co_summary_median$Hylak_id) 
+likely_lakes <- tx_ga_lakes %>%
+  filter(Hylak_id %in% tx_ga_summary_median$Hylak_id) 
 
 
 singular_fetch <- function(index = 1){
