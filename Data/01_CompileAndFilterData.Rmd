@@ -525,13 +525,11 @@ limnosat_may_oct <- new_limnosat[new_limnosat$date_m_d >= start_date & new_limno
 start_date; end_date
 
 nrow(limnosat_may_oct)
-#42182346
+#42516565
 nrow(new_limnosat)
-#63609593
-42182346/63609593 
-#0.6631444 - 66 % of the observations retained after filtering for Limnosat observations May 1 - Oct 31
-
-
+#64271235
+42516565/64271235
+#0.6615178 - 66 % of the observations retained after filtering for Limnosat observations May 1 - Oct 31
 
 # merge with Lagos data (should be static for each lake)
 # first take out the landcover data that was attached
@@ -542,16 +540,16 @@ nrow(lagos)
 
 table(unique(limnosat_may_oct$lake_nhdid)%in%unique(lagos$lake_nhdid))
  # FALSE   TRUE 
- # 42775 145083 
-# 0.2948312 don't have lagos data
+ # 42775 146301 
+#  0.2923767 don't have lagos data
  
 #unique number of lakes to start with
 length(unique(new_limnosat$lake_nhdid))
-#192446
+#193667
 
 #after filtering for may-oct season
 length(unique(limnosat_may_oct$lake_nhdid))
-#187858
+#189076
 
 
 #merge may-oct limnosat dataset with the filtered lagos dataset
@@ -560,12 +558,12 @@ limnosat_may_oct_lagos<-inner_join(limnosat_may_oct,lagos)
 
 #after filtering for may-oct and observations with lagos data
 length(unique(limnosat_may_oct_lagos$lake_nhdid))
-#145083
+#146301
 
 nrow(limnosat_may_oct_lagos)
-#35717712
+#36051931
 
-35717712/63609593 #56% of observations retained after filtering for May-Oct and only those with Lagos data
+36051931/64271235 #56% of observations retained after filtering for May-Oct and only those with Lagos data
 
 #remove month/day column
 limnosat_may_oct_lagos$date_m_d<-NULL
@@ -583,61 +581,68 @@ Here we are filtering by lakes that have:
 2. 3 observations minimum per year
 3. observations no more than 5 years apart
 
+
 Filter_Limnosat_May_Oct_Lagos_For_Temporal.R
 ```{r}
 require(tidyverse)
-load("2023-10-18_Limnosat_May_Oct_Lagos.RData")
+load("2024-07-30_Limnosat_May_Oct_Lagos.RData")
 
 #starting number of lakes
 length(unique(limnosat_may_oct_lagos$lake_nhdid))
-#145083
+
 
 #############################################################################
 #### Filter the sites x years by only those with at least 3 observations ####
 #############################################################################
 observations_bySite_byYear <- limnosat_may_oct_lagos %>%
-  group_by(lake_nhdid, year) %>% 
-  summarize(Count = n()) 
+        group_by(lake_nhdid, year) %>% 
+        summarize(Count = n()) 
+# unqiue sites and years
 nrow(observations_bySite_byYear)
-#[1] 4539767 unqiue sites and years
+
 
 morethan3obsperyear<-observations_bySite_byYear[observations_bySite_byYear$Count>=3,]
+#number of unique sites and years retained
 nrow(morethan3obsperyear)
-#[1] 3857752
-3857752/4539767 #retained 85% of unique sites and years
+
+#% of unique sites and years
+nrow(morethan3obsperyear)/nrow(observations_bySite_byYear)
 
 #subset the main dataframe by the years and sites that have at least 3 observations
 morethan3obsperyear$lake_year<-paste(morethan3obsperyear$lake_nhdid,morethan3obsperyear$year,sep="@")
 head(morethan3obsperyear)
 limnosat_may_oct_lagos$lake_year<-paste(limnosat_may_oct_lagos$lake_nhdid,limnosat_may_oct_lagos$year,sep="@")
 limnosat_may_oct_lagos$lake_year[1:6]
-table(limnosat_may_oct_lagos$lake_year%in%morethan3obsperyear$lake_year) 
- #   FALSE     TRUE 
- # 1028193 / 34689519 # lost 2.7% of observations
 
+#percent of observations lost
+table(limnosat_may_oct_lagos$lake_year%in%morethan3obsperyear$lake_year) 
+
+# starting number of observations
 nrow(limnosat_may_oct_lagos)
-#[1] 35717712
+
 limnosat_may_oct_lagos_3obs<-limnosat_may_oct_lagos[limnosat_may_oct_lagos$lake_year%in%morethan3obsperyear$lake_year,]
+# observations after removing ones with 3 observations
 nrow(limnosat_may_oct_lagos_3obs)
-#[1] 34689519
+
 
 
 ###########################################################################
 #### Filter the sites by those with 30+ years of limnosat observations #### 
 ###########################################################################
 unique_years_bySite <- limnosat_may_oct_lagos_3obs %>%
-  group_by(lake_nhdid) %>%  # Group by lake
-  summarize(Number_Years = n_distinct(year))  
+        group_by(lake_nhdid) %>%  # Group by lake
+        summarize(Number_Years = n_distinct(year))  
 
 head(unique_years_bySite)
 Yrs30<-unique_years_bySite[unique_years_bySite$Number_Years>=30,]
+#number of lakes with 30_ years of data
 nrow(Yrs30)
-#[1] 82545 #82.5K lakes with 30+ years of data
-82545/145083 # 56.9% half of lakes have 3 observations per year and 30+ years of data
+
 
 limnosat_may_oct_lagos_30yrs<-limnosat_may_oct_lagos_3obs[limnosat_may_oct_lagos_3obs$lake_nhdid%in%Yrs30$lake_nhdid,]
+# should match tne number of sites
 length(unique(limnosat_may_oct_lagos_30yrs$lake_nhdid))
-#[1] 82545 - matches number of sites
+
 
 ############################################################################
 #### Filter the lakes that have observations no more than 5 years apart #### 
@@ -648,12 +653,14 @@ lake_year<-limnosat_may_oct_lagos_30yrs%>%
         select(lake_nhdid, year,date) #this grabs date too even if you don't add it here
 lake_year$date<-NULL
 nrow(lake_year)
-#[1] 27789499
+
+#lake years after distinct
 lake_year<-distinct(lake_year)
 nrow(lake_year)
-#2905088
+
+#number of lakes
 length(unique(lake_year$lake_nhdid))
-#82545  number of lakes
+
 
 
 lakes_rm<-NULL
@@ -663,7 +670,7 @@ for(i in 1:length(unique(lake_year$lake_nhdid))){
         sub<-lake_year[lake_year$lake_nhdid==unique(lake_year$lake_nhdid)[i],]
         for(j in 1:(nrow(sub)-1)){
                 if(sub[j+1,]$year - sub[j,]$year > 5){
-                     lakes_rm<-c(lakes_rm, as.character(sub[1,1]))   
+                        lakes_rm<-c(lakes_rm, as.character(sub[1,1]))   
                 }
         }
         print(i)
@@ -675,57 +682,44 @@ limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[limnosat_
 
 #how many lakes?
 length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))
-#[1] 81035
+
 
 length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))/length(unique(limnosat_may_oct_lagos$lake_nhdid))
-#[1] 0.5585424
+
 
 #rename to something short and easy to work with
-temporal<-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr
+limnosat<-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr
 write.csv(lakes_rm,"lakes_removed_5YearsNoData.csv")
-rm(list=setdiff(ls(), "temporal"))
+rm(list=setdiff(ls(), "limnosat"))
 
-write_rds(temporal,paste0(Sys.Date(),"_Limnosat_Lagos.rds"))
-#save.image(paste0(Sys.Date(),"_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData"))
-```
-
-```{bash}
-rsync /Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Filter_Limnosat_May_Oct_Lagos_For_Temporal.R jvonegge@beartooth.arcc.uwyo.edu:/project/lakecolor/data/archive
+write_rds(limnosat,paste0(Sys.Date(),"_Limnosat_Lagos.rds"))
 ```
 
 
 run_Filter_Limnosat_May_Oct_Lagos_For_Temporal.sh
 ```{bash}
 #!/bin/bash
-#SBATCH --job-name Filter_Limnosat_May_Oct_Lagos_For_Temporal
+#SBATCH --job-name Filter_Limnosat
 #SBATCH --mem=60GB
 #SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --account=microbiome
 #SBATCH --output=Filter_Limnosat_May_Oct_Lagos_For_Temporal_%A.out
 
-cd /project/lakecolor/data/archive
+cd /project/lakecolor/data/
 module load arcc/1.0  gcc/12.2.0 
-module load r/4.2.2
+module load r/4.4.0
 
 srun Rscript Filter_Limnosat_May_Oct_Lagos_For_Temporal.R
 date
+
 ```
 
 
-## d. move these files into the main data folder for people to use
+##LEFT OFF HERE
+
+## c. move these files into the main data folder for people to use
 ```{bash}
-mv 2023-10-18_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData ..
-chmod a-w 2023-10-18_SPATIAL_Limnosat_May_Oct_Lagos_Landcover.RData
-mv 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData ..
-chmod a-w 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData
+#mv 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData ..
+#chmod a-w 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData
 ```
-
-
-Questions
-- Do we have lagos data without landcover data? or do all lagos lakes have landcover data?
-I'm thinking here that we may not have as many lakes match to lagos data if we merged the lagos data with landcover data and only kept the ones that matched (ask Linnea)
-
-
-
-

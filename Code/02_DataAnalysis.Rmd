@@ -11,7 +11,7 @@ Request resources, move to directory, and load modules for R
 ssh jvonegge@beartooth.arcc.uwyo.edu
 cd /project/lakecolor/data_analysis/lakecolor_climate_landcover_alltrends
 
-salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=lakecolor --time=1:00:00
+salloc --mem=110GB --nodes=1 --cpus-per-task=8 --account=lakecolor --time=3:00:00
 
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.4.0
@@ -34,6 +34,19 @@ bg.fui = tibble(
 
 
 
+###############################
+PRISM DATA EXTRACTION GOES HERE (USE THE RMARKDOWN FILE)
+###############################
+
+
+
+
+###############################
+LINEAR MODELS GOES HERE (USE THE R SCRIPT) 
+###############################
+
+- minus 1992-1995
+- update the starting and ending file locations
 
 
 
@@ -47,16 +60,7 @@ bg.fui = tibble(
 
 
 
-
-
-
-
-
-
-
-
-
-# 3. compile trends, climate, landcover
+# 3. compile lake color trends, climate, and landcover
 - Add back in ecoregion and any other categorical predictors removed for PCA
 - Add in linear model slope of temperature and precipitation over time (done)
 - Try without switching categories
@@ -300,6 +304,6 @@ trends_prism_landcover <- inner_join(trends_prism,landcover_avg_diff, by= join_b
 dim(trends_prism_landcover)
 #[1] 81006    78
 
-write.csv(trends_prism_landcover,"2024-04-25_lakecolor_climate_landcover_trends.csv")
+write.csv(trends_prism_landcover,paste0(Sys.Date(),"_lakecolor_climate_landcover_trends.csv"))
 ```
 
