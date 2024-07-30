@@ -18,7 +18,7 @@ library(USAboundaries)
 
 # subset Limnosat lakes > 10 ha for Georgia and Texas
 ```{r, eval = F, warning = F}
-## Read in the geospatial data
+## Read in the geospatial data from Hydrolakes
 # Lakes
 lakes <- st_read('Data/HydroLakes/HydroLakes_DP.shp') %>%
   st_centroid() %>%
@@ -44,19 +44,20 @@ ggplot() +
   geom_sf(tx_ga_lakes, mapping=aes(), color='red')
 
 
-#LimnoSat color information
-ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_20200628.csv") %>%
- # mutate(Hylak_id = as.character(Hylak_id)) |>
-  filter(Hylak_id %in% tx_ga_lakes$Hylak_id) %>%
-  inner_join(tx_ga_lakes %>% 
-               as.data.frame(.) %>%
-               select(-geometry) %>%
-               select(Hylak_id))
-
+# #LimnoSat color data
+# ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_20200628.csv") %>%
+#  # mutate(Hylak_id = as.character(Hylak_id)) |>
+#   filter(Hylak_id %in% tx_ga_lakes$Hylak_id) %>%
+#   inner_join(tx_ga_lakes %>%
+#                as.data.frame(.) %>%
+#                select(-geometry) %>%
+#                select(Hylak_id))
+# 
+# length(unique(ls_tx_ga$Hylak_id)) # 2456
 #save(ls_tx_ga, tx_ga_lakes, file = 'data/ls_elev.RData')
 
 length(unique(tx_ga_lakes$Hylak_id))
-# 2495
+# 2495 hydrolakes - not limnosat
   
 
 ```
@@ -92,67 +93,71 @@ full_nhd <- do.call('rbind',full_fetch)
 
 definitely_lakes <- tx_ga_lakes[full_nhd,] 
 
+count_dL <- definitely_lakes |>
+  count(Hylak_id) # 1802 unique lakes, no duplicate Hylak_id
 
-
-
+library(mapview)
+mapview(full_nhd)
 
 nhd_hylak_duplicated <- st_join(definitely_lakes,
                      full_nhd )
 #Remove lakes that join to multiple NHDs. Impossible to resolve which numbers to take
 #from lake cat
+# below are comids that we do not want because they are duplicated as SwampMarsh
+count_dups <- nhd_hylak_duplicated |>
+  distinct() |>
+  group_by(Hylak_id) |>
+  mutate(dups= n()) |>
+  ungroup() |>
+  filter(dups>1) |>
+  filter(ftype=='SwampMarsh')
 
-table(table(nhd_hylak_duplicated$Hylak_id)>1)
-length(unique(nhd_hylak_duplicated$comid))
 
-
-nhd_dupes <- nhd_hylak_duplicated %>%
-  as.data.frame() %>%
-  select(-geometry) %>%
-  count(Hylak_id) %>%
-  filter(n > 1)
-
-nhd_hylak <- nhd_hylak_duplicated %>%
-  filter(!Hylak_id %in% nhd_dupes$Hylak_id) |>
-  left_join(ls_tx_ga, join_by(Hylak_id)) |>
-  as.data.frame() |>
-  select(Hylak_id, comid, LandsatID, date, year, dWL)
-  
-
-rm(list=setdiff(ls(), c('nhd_hylak')))
-
+nhd_hylak_nodupes <- anti_join(as.data.frame(nhd_hylak_duplicated), as.data.frame(count_dups)) |>
+ distinct() |>
+  group_by(Hylak_id) |>
+  mutate(dups= n()) |>
+  ungroup()  |>
+  mutate(comid=as.character(comid))
 
 lake_link <- readRDS('Data/lake_link.RDS') |>
   drop_na(nhdplusv2_comid) |>
   distinct(lagoslakeid, nhdplusv2_comid, .keep_all = T) |>
-  mutate(nhdplusv2_comid=as.character(nhdplusv2_comid))
+  mutate(comid=as.character(nhdplusv2_comid),
+         lake_nhdid=as.character(lake_nhdid))|>
+  select(-nhdplusv2_comid)
 head(lake_link)
+str(lake_link)
 
-class(lake_link$nhdplusv2_comid)
-class(nhd_hylak$comid)
-length(unique(lake_link$lake_nhdid))
 
-nhd_hylak$comid <- as.character(nhd_hylak$comid)
-table(table(nhd_hylak$comid)>1))
-length(unique(nhd_hylak$comid))
-
-tx_ga_limnosat_nhdid <- left_join(nhd_hylak, lake_link, by=c('comid'='nhdplusv2_comid')) |>
-  select(-comid) |>
-  distinct()
-
-checklakes <- tx_ga_limnosat_nhdid |>
-  select(Hylak_id, lagoslakeid, lake_nhdid) |>
+nhd_link <- inner_join(lake_link, nhd_hylak_nodupes, by='comid') |>
   distinct() |>
-  drop_na()
+  group_by(Hylak_id) |>
+  mutate(dups_hylak= n()) |>
+  ungroup()  |>
+  group_by(lake_nhdid) |>
+  mutate(dups_nhd= n()) |>
+  ungroup()
 
-table(nhd_hylak$comid %in% lake_link$nhdplusv2_comid)
+nhd_link_nodupes <- nhd_link |>
+  filter(dups_hylak==1 &
+           dups_nhd==1) 
 
-length(unique(lake_link$lake_nhdid))
-length(unique(lake_link$nhdplusv2_comid))
+length(unique(nhd_link_nodupes$lake_nhdid))
+length(unique(nhd_link_nodupes$lagoslakeid))
+length(unique(nhd_link_nodupes$Hylak_id))
 
-which(table(lake_link$lake_nhdid)>1)==T
+#LimnoSat color data
+ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_20200628.csv")  |>  
+  inner_join(as.data.frame(nhd_link_nodupes) %>%
+               as.data.frame(.) %>%
+               select(-geometry))|>
+  select(lagoslakeid, lake_nhdid, LandsatID, date, year, dWL) 
 
-dup<-table(lake_link$lake_nhdid)>1
+  
 
+rm(list=setdiff(ls(), c('ls_tx_ga')))
+write.csv(ls_tx_ga, 'ls_tx_ga.csv')
 ```
 
 
