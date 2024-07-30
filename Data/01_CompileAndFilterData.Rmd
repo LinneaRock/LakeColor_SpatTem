@@ -456,7 +456,8 @@ ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_202
   inner_join(as.data.frame(nhd_link_nodupes) %>%
                as.data.frame(.) %>%
                select(-geometry))|>
-  select(lagoslakeid, lake_nhdid, LandsatID, date, year, dWL) 
+  select(lagoslakeid, lake_nhdid, LandsatID, date, year, dWL)  |>
+  mutate(date=as.character(date))
 
   
 
