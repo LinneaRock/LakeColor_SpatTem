@@ -1,0 +1,305 @@
+---
+title: "02_DataAnalysis"
+author: "Jordan Von Eggers"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# 0. Set up on Beartooth 
+Request resources, move to directory, and load modules for R
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+cd /project/lakecolor/data_analysis/lakecolor_climate_landcover_alltrends
+
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=lakecolor --time=1:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+R
+```
+
+```{r}
+require(tidyverse)
+#color for manually created legend
+bg.fui = tibble(
+  ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+  ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+  color = c(
+  "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+  "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+  "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04")
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 3. compile trends, climate, landcover
+- Add back in ecoregion and any other categorical predictors removed for PCA
+- Add in linear model slope of temperature and precipitation over time (done)
+- Try without switching categories
+- Try with lake colors themselves
+- Try with change in land cover environmental dissimilarity (its pairwise comparison), so could select by lake and minimum dissimilarity minus the maximum dissimilarity. Or just take maximum dissimilarity
+- Add in development % as low medium high
+
+
+prism_climate_trends.R
+```{r}
+require(tidyverse)
+
+# 1. read in climate data from PRISM
+prism<-readRDS("../../data/prism_lakepoint_data.rds")
+range(prism$year) # range of PRSIM data
+#[1] "1984" "2022"
+
+#remove two lakes that have NAs that messes the lm up
+prism<-prism[complete.cases(prism),]
+
+# average the mean temperature, the temperature range, rainfall, fo the 39 years of observation
+prism_trends <- prism %>%
+        arrange(lake_nhdid, year)%>%
+        group_by(lake_nhdid) %>%
+        mutate(
+                # climate trends
+                lm_slope_temp=summary(lm(tmean~year))$coefficients[2,1],
+                lm_pval_temp=summary(lm(tmean~year))$coefficients[2,4],
+                # precipitation
+                lm_slope_ppt=summary(lm(ppt~year))$coefficients[2,1],
+                lm_pval_ppt=summary(lm(ppt~year))$coefficients[2,4],
+                # climate/precip means and ranges
+                avg_temp_degC = mean(tmean),
+                avg_annual_range_temp_degC = mean(tmax - tmin), # this is tmax and min within a year
+                range_ppt = max(ppt)-min(ppt),
+                avg_ppt = mean(ppt),
+                obs_year_prism = n()) %>%
+        ungroup() %>%
+        select(lake_nhdid,avg_temp_degC,avg_annual_range_temp_degC, range_ppt, avg_ppt,obs_year_prism, lm_slope_temp, lm_slope_ppt) %>%
+        distinct()
+dim(prism_trends) # 145083 sites
+table(prism_trends$obs_year_prism) # all have 39 years
+summary(prism_trends) 
+
+
+write.csv(prism_trends,"2024-04-25_Prism_climate_trends.csv")
+```
+
+
+```{r}
+require(tidyverse)
+# read in climate data
+prism<-read.csv("2024-04-25_Prism_climate_trends.csv", header=T,row.names=1)
+
+# read in temporal trend data
+trends<-read.csv("../../data/2023-12-11_TEMPORAL_Avg_LMs.csv", header=T, row.names=1)
+names(trends)
+trends$X<-NULL
+
+# rename columns to specify that this is lake color trends we are looking at
+
+trends<-trends %>%
+        rename(lm_yint_color=lm_yint,
+               lm_pval_color=lm_pval,
+               lm_rsq_color=lm_rsq,
+               lm_slope_color=lm_slope,
+               residuals_color=residuals,
+               resid_yint_color=resid_yint,
+               resid_pval_color=resid_pval,
+               resid_rsq_color=resid_rsq,
+               resid_slope_color=resid_slope)
+
+# label lakes that ACTUALLY shifted from blue to green or green to blue 
+trend_change <- trends %>%
+        group_by(lake_nhdid) %>%
+        mutate(dwl_after2002 = mean(avg_dwl_year[year > 2002])) %>%
+        ungroup() |>
+        mutate(
+                trend_cat_switch = ifelse(
+                        trend_cat %in% c('Blue -> Greener', 'Green -> Bluer') &
+                                dwl_prior2002 > 530 &
+                                dwl_after2002 < 530,
+                        'Shift to blue',
+                        ifelse(
+                                trend_cat %in% c('Blue -> Greener', 'Green -> Bluer') &
+                                        dwl_prior2002 < 530 &
+                                        dwl_after2002 > 530,
+                                'Shift to green',
+                                trend_cat)))
+
+trend_change %>%
+        filter(trend_cat_switch %in%c('Shift to green','Shift to blue'))%>%
+        select(lake_nhdid) %>%
+        distinct() %>%
+        nrow()
+# [1] 5133 - same as what Linnea found in code for Figure 3
+
+
+trends_avg <- trend_change %>%
+        group_by(lake_nhdid) %>%
+        mutate(avg_obs_site = mean(obs_year),
+               avg_obs_days_site = mean(obs_days_year),
+               avg_dwl_site = mean(avg_dwl_year),
+               avg_range_dwl_site = mean(range_dwl_site_year)) %>%
+                       ungroup()%>%
+        select(
+                lake_nhdid,
+                epanutr_zoneid,
+                hu12_zoneid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                lake_islandperimeter_m,
+                lake_connectivity_class,
+                lake_connectivity_permanent,
+                lake_totalperimeter_m,
+                ws_area_ha,
+                ws_lake_arearatio,
+                range_dwl_site,
+                mean_range_dwl_site,
+                lm_yint_color,
+                lm_pval_color,
+                lm_rsq_color,
+                lm_slope_color,
+                resid_yint_color,
+                resid_pval_color,
+                resid_rsq_color,
+                resid_slope_color,
+                dwl_prior2002,
+                trend_cat,
+                trend_cat_switch,
+                avg_obs_site,
+                avg_obs_days_site,
+                avg_dwl_site,
+                avg_range_dwl_site
+        )%>%
+        distinct()
+dim(trends_avg)
+#[1] 81007    31
+
+# join the trend data and prism data
+trends_prism <- inner_join(trends_avg,prism, by= join_by(lake_nhdid))
+dim(trends_prism)
+#[1] 81007    38
+
+# read in landcover data, filter by lakes we have in trends, and average all columns
+landcover <- readRDS("/project/lakecolor/data/archive/2023-09-29_lagos_landcover_data.rds")
+
+landcover_avg_diff <- landcover %>%
+        arrange(lake_nhdid, year) %>%
+                select(lake_nhdid,
+                nlcd_barren31_pct,
+                nlcd_cultcrop82_pct,
+                nlcd_devhi24_pct,
+                nlcd_devlow22_pct,
+                nlcd_devmed23_pct,
+                nlcd_devopen21_pct,
+                nlcd_forcon42_pct,
+                nlcd_fordec41_pct,
+                nlcd_formix43_pct,
+                nlcd_grass71_pct,
+                nlcd_icesnow12_pct,
+                nlcd_openwater11_pct,
+                nlcd_past81_pct,
+                nlcd_shrub52_pct,
+                nlcd_wetemerg95_pct,
+                nlcd_wetwood90_pct
+        ) %>%         group_by(lake_nhdid) %>%
+        mutate(
+#add in averaged column
+        across(starts_with("nlcd"), list(avg = ~ mean(.)), .names = "avg_{.col}"),
+nlcd_barren31_diff = nlcd_barren31_pct[7]-nlcd_barren31_pct[1],
+nlcd_cultcrop82_diff = nlcd_cultcrop82_pct[7]-nlcd_cultcrop82_pct[1],
+nlcd_devhi24_diff = nlcd_devhi24_pct[7]-nlcd_devhi24_pct[1],
+nlcd_devlow22_diff = nlcd_devlow22_pct[7]-nlcd_devlow22_pct[1],
+nlcd_devmed23_diff = nlcd_devmed23_pct[7]-nlcd_devmed23_pct[1],
+nlcd_devopen21_diff = nlcd_devopen21_pct[7]-nlcd_devopen21_pct[1],
+nlcd_forcon42_diff = nlcd_forcon42_pct[7]-nlcd_forcon42_pct[1],
+nlcd_fordec41_diff = nlcd_fordec41_pct[7]-nlcd_fordec41_pct[1],
+nlcd_formix43_diff = nlcd_formix43_pct[7]-nlcd_formix43_pct[1],
+nlcd_grass71_diff = nlcd_grass71_pct[7]-nlcd_grass71_pct[1],
+nlcd_icesnow12_diff = nlcd_icesnow12_pct[7]-nlcd_icesnow12_pct[1],
+nlcd_openwater11_diff = nlcd_openwater11_pct[7]-nlcd_openwater11_pct[1],
+nlcd_past81_diff = nlcd_past81_pct[7]-nlcd_past81_pct[1],
+nlcd_shrub52_diff = nlcd_shrub52_pct[7]-nlcd_shrub52_pct[1],
+nlcd_wetemerg95_diff = nlcd_wetemerg95_pct[7]-nlcd_wetemerg95_pct[1],
+nlcd_wetwood90_diff = nlcd_wetwood90_pct[7]-nlcd_wetwood90_pct[1],
+
+nlcd_summed_forest_diff= sum(nlcd_forcon42_pct[7],nlcd_fordec41_pct[7], nlcd_formix43_pct[7])- sum(nlcd_forcon42_pct[1],nlcd_fordec41_pct[1], nlcd_formix43_pct[1]),
+nlcd_summed_wetland_diff = sum(nlcd_wetwood90_pct[7],nlcd_wetemerg95_pct[7])- sum(nlcd_wetwood90_pct[1],nlcd_wetemerg95_pct[1]),
+nlcd_summed_agr_diff = sum(nlcd_cultcrop82_pct[7],nlcd_past81_pct[7])- sum(nlcd_cultcrop82_pct[1],nlcd_past81_pct[1]),
+nlcd_summed_dev_diff= sum(nlcd_devlow22_pct[7],nlcd_devhi24_pct[7],nlcd_devmed23_pct[7], nlcd_devopen21_pct[7])- sum(nlcd_devlow22_pct[1],nlcd_devhi24_pct[1],nlcd_devmed23_pct[1], nlcd_devopen21_pct[1])
+                ) %>% ungroup() %>% 
+                select(-c(
+                nlcd_barren31_pct,
+                nlcd_cultcrop82_pct,
+                nlcd_devhi24_pct,
+                nlcd_devlow22_pct,
+                nlcd_devmed23_pct,
+                nlcd_devopen21_pct,
+                nlcd_forcon42_pct,
+                nlcd_fordec41_pct,
+                nlcd_formix43_pct,
+                nlcd_grass71_pct,
+                nlcd_icesnow12_pct,
+                nlcd_openwater11_pct,
+                nlcd_past81_pct,
+                nlcd_shrub52_pct,
+                nlcd_wetemerg95_pct,
+                nlcd_wetwood90_pct
+                )
+        ) %>% # get rid of year and data from individual years
+        distinct() %>%
+        rowwise() |>
+  mutate(avg_nlcd_dev_pct = sum(
+    avg_nlcd_devlow22_pct,
+    avg_nlcd_devmed23_pct,
+    avg_nlcd_devhi24_pct,
+    avg_nlcd_devopen21_pct
+  ),
+  avg_nlcd_ag_pct = sum(
+    avg_nlcd_cultcrop82_pct,
+    avg_nlcd_past81_pct
+  ),
+  avg_nlcd_forest_pct = sum(
+    avg_nlcd_forcon42_pct,
+    avg_nlcd_fordec41_pct,
+    avg_nlcd_formix43_pct
+  ),
+  avg_nlcd_wetland_pct = sum(
+    avg_nlcd_wetwood90_pct,
+    avg_nlcd_wetemerg95_pct
+  )) |>
+  ungroup()
+
+
+#merge landcover with prism and lake color trends
+trends_prism_landcover <- inner_join(trends_prism,landcover_avg_diff, by= join_by(lake_nhdid))
+dim(trends_prism_landcover)
+#[1] 81006    78
+
+write.csv(trends_prism_landcover,"2024-04-25_lakecolor_climate_landcover_trends.csv")
+```
+

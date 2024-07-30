@@ -473,9 +473,12 @@ getwd()
 #[1] "/pfs/tc1/project/lakecolor/data"
 
 # load in large TX GA limnosat
-ls_tx_ga<-read.csv("limnosat_large/ls_tx_ga.csv", row.names = 1) %>% select(-c(lagoslakeid, LandsatID)) %>% mutate(date=as.Date(date, format="%Y-%m-%d"))
-load("compile_data/data_export/new_limnosat_20230927.RData") # load in all small limnosat
+ls_tx_ga<-read.csv("limnosat_large/ls_tx_ga.csv", row.names = 1) %>% select(-c(lagoslakeid, LandsatID))
+ls_tx_ga$date<-as.Date(ls_tx_ga$date)
+load("compile_data/data_export/new_limnosat_20230927.RData") # load in all small limnosat 
 objects()
+
+new_limnosat<-as.data.frame(new_limnosat)
 
 new_limnosat <- new_limnosat %>% select(lake_nhdid ,date ,year, dWL)
 
@@ -489,11 +492,16 @@ nrow(new_limnosat)
 
 # row bind together
 full_limnosat<-rbind(new_limnosat,ls_tx_ga)
+nrow(full_limnosat)
 
-write.csv(full_limnosat,"2024-07-30_full_limnosat.csv")
+class(full_limnosat$date)
+
+new_limnosat<-full_limnosat
+rm(list=setdiff(ls(), c('new_limnosat')))
+save.image("2024-07-30_full_limnosat.Rdata")
 ```
 
-# 4. Filter and create spatial and temporal dataframes 
+# 4. Filter and create limnosat dataframes 
 ## a. Filter limnosat observations by season and LAGOS data
 Filter by May 1-Oct 31 observations and keep observations with LAGOS data
 
@@ -504,12 +512,12 @@ cd /project/lakecolor/data
 ```{r}
 require(tidyverse)
 
-new_limnosat<-read.csv("2024-07-30_full_limnosat.csv",row.names=1)
+load("2024-07-30_full_limnosat.Rdata")
 lake_data<-readRDS("2023-09-29_lagos_landcover_data.rds")
 
 
 #Filter Limnosat data by observations between May 1st October 31st
-new_limnosat$date_m_d <- format(as.POSIXct(new_limnosat$date), format = "%m-%d")
+new_limnosat$date_m_d <- format(new_limnosat$date, format = "%m-%d")
 head(new_limnosat$date_m_d)
 start_date <- format(as.Date("2023-05-01"), format = "%m-%d")
 end_date <- format(as.Date("2023-10-31"), format = "%m-%d")
@@ -677,7 +685,8 @@ temporal<-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr
 write.csv(lakes_rm,"lakes_removed_5YearsNoData.csv")
 rm(list=setdiff(ls(), "temporal"))
 
-save.image(paste0(Sys.Date(),"_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData"))
+write_rds(temporal,paste0(Sys.Date(),"_Limnosat_Lagos.rds"))
+#save.image(paste0(Sys.Date(),"_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData"))
 ```
 
 ```{bash}
