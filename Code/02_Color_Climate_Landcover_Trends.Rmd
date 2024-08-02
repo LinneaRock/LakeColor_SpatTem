@@ -34,14 +34,7 @@ bg.fui = tibble(
 
 
 
-
-###############################
-LINEAR MODELS GOES HERE (USE THE R SCRIPT) 
-###############################
-
-- minus 1992-1995
-- update the starting and ending file locations
-
+# 1. Lake color linear models
 
 2024-08-02_TEMPORAL_Avg_LMs.R
 ```{r}
@@ -59,6 +52,7 @@ bg.fui = tibble(
 
 bg.fui<-as.data.frame(bg.fui)
 
+limno$date<-NULL # remove this because we don't need the date anymore and there keeps being errors with the time zone. 
 temporal_avg_lms <- limno %>%
         filter(!year%in%c(1992,1993,1994,1995))%>% # remove years 1992-1995 for due to the Mt Pinatubo eruption 
         group_by(lake_nhdid) %>%
@@ -67,11 +61,10 @@ temporal_avg_lms <- limno %>%
         group_by(lake_nhdid,year) %>%
         mutate(avg_dwl_year=mean(dWL), 
                range_dwl_site_year= max(dWL)- min(dWL),
-               obs_year=n(),
-               obs_days_year=as.numeric(max(as.Date(date)) - min(as.Date(date)))) %>% ungroup() %>%
+               obs_year=n()) %>% ungroup() %>%
         group_by(lake_nhdid) %>%
         mutate(mean_range_dwl_site=mean(range_dwl_site_year)) %>% ungroup() %>%
-        select(-date,-dWL,-brightness,-normalized_green,-Nir,-lake_year) %>% 
+        select(-dWL,-lake_year) %>% 
         distinct() %>%
         
         #linear models
@@ -135,10 +128,9 @@ temporal_avg_lms <- limno %>%
         )
         )
 
+write.csv(temporal_avg_lms,"/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv")
 
-write.csv(temporal_avg_lms,paste0(Sys.Date(),"lake_color_linear_models.csv"))
 ```
-
 
 
 run_2024-08-02_TEMPORAL_Avg_LM.sh
@@ -160,27 +152,16 @@ date
 ```
 
 
-# LEFT OFF HERE
-
-# 3. compile lake color trends, climate, and landcover
-- Add back in ecoregion and any other categorical predictors removed for PCA
-- Add in linear model slope of temperature and precipitation over time (done)
-- Try without switching categories
-- Try with lake colors themselves
-- Try with change in land cover environmental dissimilarity (its pairwise comparison), so could select by lake and minimum dissimilarity minus the maximum dissimilarity. Or just take maximum dissimilarity
-- Add in development % as low medium high
-
-
-prism_climate_trends.R
+# 2. PRISM climate trends
 ```{r}
 require(tidyverse)
 
 # 1. read in climate data from PRISM
-prism<-readRDS("../../data/prism_lakepoint_data.rds")
+prism<-readRDS("/project/lakecolor/data/01_Compile_Filter_Data/prism_lakepoint_data.rds")
 range(prism$year) # range of PRSIM data
 #[1] "1984" "2022"
 
-#remove two lakes that have NAs that messes the lm up
+#remove the lakes that have NAs that messes the lm up
 prism<-prism[complete.cases(prism),]
 
 # average the mean temperature, the temperature range, rainfall, fo the 39 years of observation
@@ -203,24 +184,24 @@ prism_trends <- prism %>%
         ungroup() %>%
         select(lake_nhdid,avg_temp_degC,avg_annual_range_temp_degC, range_ppt, avg_ppt,obs_year_prism, lm_slope_temp, lm_slope_ppt) %>%
         distinct()
-dim(prism_trends) # 145083 sites
+dim(prism_trends) # 81874 sites
 table(prism_trends$obs_year_prism) # all have 39 years
 summary(prism_trends) 
 
 
-write.csv(prism_trends,"2024-04-25_Prism_climate_trends.csv")
+write.csv(prism_trends,"/project/lakecolor/data/02_Data_Analysis/2024-08-02_Prism_climate_trends.csv")
 ```
 
 
+
+# 3. Compile lake color trends, climate data and trends, and landcover data and trends
 ```{r}
 require(tidyverse)
 # read in climate data
-prism<-read.csv("2024-04-25_Prism_climate_trends.csv", header=T,row.names=1)
+prism<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_Prism_climate_trends.csv", header=T,row.names=1)
 
 # read in temporal trend data
-trends<-read.csv("../../data/2023-12-11_TEMPORAL_Avg_LMs.csv", header=T, row.names=1)
-names(trends)
-trends$X<-NULL
+trends<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv", header=T, row.names=1)
 
 # rename columns to specify that this is lake color trends we are looking at
 
@@ -258,13 +239,12 @@ trend_change %>%
         select(lake_nhdid) %>%
         distinct() %>%
         nrow()
-# [1] 5133 - same as what Linnea found in code for Figure 3
+# [1] 4809 (previously 5133 - same as what Linnea found in code for Figure 3)
 
 
 trends_avg <- trend_change %>%
         group_by(lake_nhdid) %>%
         mutate(avg_obs_site = mean(obs_year),
-               avg_obs_days_site = mean(obs_days_year),
                avg_dwl_site = mean(avg_dwl_year),
                avg_range_dwl_site = mean(range_dwl_site_year)) %>%
                        ungroup()%>%
@@ -297,21 +277,20 @@ trends_avg <- trend_change %>%
                 trend_cat,
                 trend_cat_switch,
                 avg_obs_site,
-                avg_obs_days_site,
                 avg_dwl_site,
                 avg_range_dwl_site
         )%>%
         distinct()
 dim(trends_avg)
-#[1] 81007    31
+#[1] 81875    30
 
 # join the trend data and prism data
 trends_prism <- inner_join(trends_avg,prism, by= join_by(lake_nhdid))
 dim(trends_prism)
-#[1] 81007    38
+#[1] 81874    37
 
 # read in landcover data, filter by lakes we have in trends, and average all columns
-landcover <- readRDS("/project/lakecolor/data/archive/2023-09-29_lagos_landcover_data.rds")
+landcover <- readRDS("/project/lakecolor/data/01_Compile_Filter_Data/2023-09-29_lagos_landcover_data.rds")
 
 landcover_avg_diff <- landcover %>%
         arrange(lake_nhdid, year) %>%
@@ -404,8 +383,15 @@ nlcd_summed_dev_diff= sum(nlcd_devlow22_pct[7],nlcd_devhi24_pct[7],nlcd_devmed23
 #merge landcover with prism and lake color trends
 trends_prism_landcover <- inner_join(trends_prism,landcover_avg_diff, by= join_by(lake_nhdid))
 dim(trends_prism_landcover)
-#[1] 81006    78
+#[1] 81874    77
 
-write.csv(trends_prism_landcover,paste0(Sys.Date(),"_lakecolor_climate_landcover_trends.csv"))
+write_rds(trends_prism_landcover,"2024-08-02_lakecolor_climate_landcover_trends.rds")
+```
+
+# 4. Protect files in the 02_Data_Analysis folder and move a copy of the main file
+
+```{bash}
+chmod a-w *
+cp 2024-08-02_lakecolor_climate_landcover_trends.rds ..
 ```
 
