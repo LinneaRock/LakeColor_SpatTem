@@ -694,7 +694,7 @@ rm(list=setdiff(ls(), "limnosat"))
 
 write_rds(limnosat,paste0(Sys.Date(),"_Limnosat_Lagos.rds"))
 ```
-
+Total number of lakes = 81,875
 
 run_Filter_Limnosat_May_Oct_Lagos_For_Temporal.sh
 ```{bash}
@@ -716,10 +716,138 @@ date
 ```
 
 
-##LEFT OFF HERE
 
-## c. move these files into the main data folder for people to use
+# 5. Add in climate data from PRISM
+
 ```{bash}
-#mv 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData ..
-#chmod a-w 2023-10-19_TEMPORAL_Limnosat_May_Oct_Lagos_Filtered.RData
+#load r and gdal (need gdal for terra to work)
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+module load gdal/3.6.1
+R
 ```
+
+ 
+```{r}
+# Load required packages and trim initial spatial dataset for comparison.
+
+#Set required packages
+require(tidyverse)
+require(codetools)
+require(terra)
+require(prism)
+
+#load in temporal data to get coordinates for each lake
+limno<-readRDS("/project/lakecolor/data/2024-07-30_Limnosat_Lagos.rds")
+
+#subset temporal to just variables of interest 
+lake.coords.id <- select(limno, lake_nhdid, lake_lat_decdeg, lake_lon_decdeg)
+#select kept adding a date column so I had to brute force remove it
+#lake.coords.id <- lake.coords.id[-1]
+#trim spatial for only one instance of each lake
+lake.coords.id <- lake.coords.id %>% distinct()
+
+
+# Create geometry objects from the lake coordinates
+
+#Create a dataframe that's just the coordinates 
+xy <- lake.coords.id[2:3]
+#rename to lat to y and long to x
+colnames(xy)[1:2] = c("y","x")
+#rearrange colums so x comes first
+xy <- xy[2:1]
+#turn lake.coord.id into a SpatVect
+lakepoints <- vect(xy, geom=c("x", "y"), crs = "epsg:4326")
+
+
+# Set the prism directory (commented out is how you download PRISM data, which is a one time thing)
+#set prism archive and download prism data
+prism_set_dl_dir("/project/lakecolor/data/prism_input")
+# get_prism_annual("ppt", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmean", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmax", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmin", 1984:2022, keepZip = FALSE)
+
+
+# Download mean, max, min, and ppt from the prism archive 
+
+#Access prism archive (downloaded into the lake color project) for tmean/tmax/tmin/ppt annual values
+tmean <- prism_archive_subset(type = "tmean", temp_period = "annual",)
+tmax <- prism_archive_subset(type = "tmax", temp_period = "annual",)
+tmin <- prism_archive_subset(type = "tmin", temp_period = "annual",)
+ppt <- prism_archive_subset(type = "ppt", temp_period = "annual",)
+
+# Create a raster out of the prism data 
+
+#rasterize the data (base resolution for this function is 4km)
+tmean <- rast(pd_to_file(tmean))
+tmax <- rast(pd_to_file(tmax))
+tmin <- rast(pd_to_file(tmin))
+ppt <- rast(pd_to_file(ppt))
+
+
+# Extract values from each lake point and make it into a data frame
+
+#extract values from the data raster for each year using the location of each lake in the set (using the spatvector previously made)
+tmean_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmean, lakepoints))
+tmax_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmax, lakepoints))
+tmin_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmin, lakepoints))
+ppt_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(ppt, lakepoints))
+
+
+# Format data 
+
+#convert wide form to long form 
+tmean_from_prism <- pivot_longer(data = tmean_from_prism, cols = starts_with("PRISM"))
+tmax_from_prism <- pivot_longer(data = tmax_from_prism, cols = starts_with("PRISM"))
+tmin_from_prism <- pivot_longer(data = tmin_from_prism, cols = starts_with("PRISM"))
+ppt_from_prism <- pivot_longer(data = ppt_from_prism, cols = starts_with("PRISM"))
+#convert string of prism data year to numeric value of year 
+tmean_from_prism$name <- str_extract(tmean_from_prism$name, "\\d{4}")
+tmax_from_prism$name <- str_extract(tmax_from_prism$name, "\\d{4}")
+tmin_from_prism$name <- str_extract(tmin_from_prism$name, "\\d{4}")
+ppt_from_prism$name <- str_extract(ppt_from_prism$name, "\\d{4}")
+#rename "name" to "year" 
+colnames(tmean_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmean")
+colnames(tmax_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmax")
+colnames(tmin_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmin")
+colnames(ppt_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "ppt")
+
+
+# Join data into one data frame 
+
+prism_lake_data <- tmean_from_prism %>% 
+  left_join(tmax_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year")) %>% 
+  left_join(tmin_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year")) %>% 
+  left_join(ppt_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year"))
+
+#Remove ID column
+prism_lake_data$ID <- NULL
+
+#Save the final product to the working directory 
+
+saveRDS(prism_lake_data, file = "prism_lakepoint_data.rds")
+```
+
+
+
+# 6. Move and protect files
+```{bash}
+mkdir 01_Compile_Filter_Data
+chmod u+w compile_data limnosat_small
+mv * 01_Compile_Filter_Data/
+chmod a-w *
+```
+
+# 7. Final files
+The two final files from the 01_Compile_Filter_Data.Rmd and in the 01_Compile_Filter_Data folder are: 
+1. 2024-07-30_Limnosat_Lagos.rds - compiled and filtered data for temporal time series, with 81,875 total lakes
+2. prism_lakepoint_data.rds - PRISM data for the previous file
