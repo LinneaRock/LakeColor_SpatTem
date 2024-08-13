@@ -43,7 +43,7 @@ data <- data %>%
                              avg_dwl_site <=bg.fui[20,1] & avg_dwl_site <bg.fui[20,2] ~bg.fui[20,3]   , 
                              avg_dwl_site <=bg.fui[21,1] & avg_dwl_site <bg.fui[21,2] ~bg.fui[21,3] , T~"black"))  
 
-#figure 1 (a)
+#figure 1 (a)- dwl averaged across all years
 states <- map_data("state")
 
 fig1a<-ggplot(data = data) + 
@@ -55,6 +55,44 @@ fig1a<-ggplot(data = data) +
 
 ggsave("fig1a.png", fig1a, height=4.5, width=6.5, units='in', dpi=1200)
 
+#figure 1 (b)- histogram of dwl
+cols<-as.data.frame(breaks_seq<-seq(470,600,by=5))
+names(cols)<-"breaks"
+cols<- cols %>%
+  mutate( col_hex = case_when(breaks >=bg.fui[1,1] & breaks <bg.fui[1,2] ~ bg.fui[1,3],
+                              breaks >=bg.fui[2,1] & breaks <bg.fui[2,2] ~bg.fui[2,3], 
+                              breaks >=bg.fui[3,1] & breaks <bg.fui[3,2] ~bg.fui[3,3]   , 
+                              breaks >=bg.fui[4,1] & breaks <bg.fui[4,2] ~bg.fui[4,3]   , 
+                              breaks >=bg.fui[5,1] & breaks <bg.fui[5,2] ~bg.fui[5,3]   , 
+                              breaks >=bg.fui[6,1] & breaks <bg.fui[6,2] ~bg.fui[6,3]   , 
+                              breaks >=bg.fui[7,1] & breaks <bg.fui[7,2] ~bg.fui[7,3]   , 
+                              breaks >=bg.fui[8,1] & breaks <bg.fui[8,2] ~bg.fui[8,3]   , 
+                              breaks >=bg.fui[9,1] & breaks <bg.fui[9,2] ~bg.fui[9,3]   , 
+                              breaks >=bg.fui[10,1] & breaks <bg.fui[10,2] ~bg.fui[10,3]   , 
+                              breaks >=bg.fui[11,1] & breaks <bg.fui[11,2] ~bg.fui[11,3]   , 
+                              breaks >=bg.fui[12,1] & breaks <bg.fui[12,2] ~bg.fui[12,3]   , 
+                              breaks >=bg.fui[13,1] & breaks <bg.fui[13,2] ~bg.fui[13,3]   , 
+                              breaks >=bg.fui[14,1] & breaks <bg.fui[14,2] ~bg.fui[14,3]   , 
+                              breaks >=bg.fui[15,1] & breaks <bg.fui[15,2] ~bg.fui[15,3]   , 
+                              breaks >=bg.fui[16,1] & breaks <bg.fui[16,2] ~bg.fui[16,3]   , 
+                              breaks >=bg.fui[17,1] & breaks <bg.fui[17,2] ~bg.fui[17,3]   , 
+                              breaks >=bg.fui[18,1] & breaks <bg.fui[18,2] ~bg.fui[18,3]   , 
+                              breaks >=bg.fui[19,1] & breaks <bg.fui[19,2] ~bg.fui[19,3]   , 
+                              breaks >=bg.fui[20,1] & breaks <bg.fui[20,2] ~bg.fui[20,3]   , 
+                              breaks >=bg.fui[21,1] & breaks <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
 
+png("fig1b.png", height=4, width=5, units="in", res=1200)
+par(mar=c(4,4,1,1))
+hist(data$avg_dwl_site, ylab="Number of lakes", xlab="Dominant wavelength (nm)",
+     breaks=cols$breaks, col = cols$col_hex, main="", ylim=c(0,8000))
+abline(v=530, col="black", lty="dashed",lwd=2)
+dev.off()
+
+data %>% 
+  filter(avg_dwl_site >= 530) %>% 
+  nrow()
+data %>% 
+  filter(avg_dwl_site <= 530) %>% 
+  nrow()
 
 
