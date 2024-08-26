@@ -1,0 +1,327 @@
+---
+title: "Figures_4-6"
+author: "Jordan Von Eggers"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+cd /project/lakecolor/data_analysis/lakecolor_climate_landcover_alltrends
+
+salloc --mem=110GB --nodes=1 --cpus-per-task=8 --account=lakecolor --time=3:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+R
+```
+
+# Figure 6
+## PCA
+```{r}
+require(tidyverse)
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-02_lakecolor_climate_landcover_trends.rds")
+nrow(lk)
+#[1] 81874
+
+#filter lakes greater than 100,000 hectares
+lk <- lk %>% filter(lake_waterarea_ha <= 100000) 
+nrow(lk)
+#[1] 81868 # removed 6 lakes greater than 100,00 hectares
+
+# remove lakes with wavelengths greater than 590
+lk <- lk %>% filter(avg_dwl_site < 590) 
+nrow(lk) # removed 7 lakes with wavelengths greater than 590
+#81861
+
+# select the variables you want to work on, but it will automatically grab date and lake_ndhid
+X <- lk %>%
+        select(
+                # lake size and location variables
+                lake_nhdid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                ws_area_ha,
+                # climate variables
+                avg_temp_degC,
+                avg_ppt,
+                lm_slope_temp,
+                lm_slope_ppt,
+                avg_annual_range_temp_degC,
+                # landcover vars
+                nlcd_summed_forest_diff,
+                nlcd_summed_wetland_diff,
+                nlcd_summed_agr_diff,
+                nlcd_summed_dev_diff,
+                avg_nlcd_dev_pct,
+                avg_nlcd_ag_pct,
+                avg_nlcd_forest_pct,
+                avg_nlcd_wetland_pct,
+                avg_nlcd_icesnow12_pct,
+                avg_nlcd_shrub52_pct,
+                avg_nlcd_barren31_pct,
+                avg_nlcd_openwater11_pct
+        )
+dim(X)
+#[1] 81861    24
+
+X <- X %>%
+       column_to_rownames(var = "lake_nhdid") %>% distinct() %>% drop_na()
+dim(X)
+#[1] 81785    23
+
+Y <- lk %>%
+               filter(lake_nhdid%in%rownames(X))%>%
+        select(lake_nhdid,avg_dwl_site, trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)
+ 
+Y <- Y %>%
+       column_to_rownames(var = "lake_nhdid") %>% distinct() %>% drop_na()
+dim(Y)
+#[1] 81784     5
+
+X <- X %>% filter(rownames(.)%in%rownames(Y))
+dim(X)
+#[1] 81784    23
+
+rm(list=ls()[! ls() %in% c("Y", "X")])
+
+# run PCA
+R <- cor(X)
+round(R,4)
+
+pc <- princomp(X, cor=T)
+```
+
+
+```{r}
+(spc <- summary(pc, loadings=T, cutoff=0.3))
+#lambda <- pc$sd^2
+plot(pc, type="lines", main = "")
+```
+Keep 8 PCs
+
+```{r}
+for (i in 1:8){
+print(paste0("Principal component ",i))
+print(pc$loadings[which(abs(pc$loadings[,i])>0.3),i])
+}
+```
+[1] "Principal component 1"
+lake_elevation_m  lake_lat_decdeg  lake_lon_decdeg    avg_temp_degC          avg_ppt 
+       0.3091363        0.3554634       -0.3019962       -0.3833503       -0.3550235 
+[1] "Principal component 2"
+      lake_elevation_m          lm_slope_temp    avg_nlcd_forest_pct avg_nlcd_icesnow12_pct 
+             0.3478534              0.3957352              0.3092667              0.3702801 
+[1] "Principal component 3"
+avg_annual_range_temp_degC        avg_nlcd_forest_pct   avg_nlcd_openwater11_pct 
+                -0.3608975                  0.4351759                 -0.3139059 
+[1] "Principal component 4"
+lake_waterarea_ha  lake_perimeter_m        ws_area_ha 
+       -0.5992051        -0.5988893        -0.4169083 
+[1] "Principal component 5"
+nlcd_summed_agr_diff     avg_nlcd_dev_pct      avg_nlcd_ag_pct 
+           0.4160663            0.3486192           -0.5314352 
+[1] "Principal component 6"
+nlcd_summed_dev_diff     avg_nlcd_dev_pct avg_nlcd_wetland_pct 
+           0.4967819            0.4324017           -0.3649070 
+[1] "Principal component 7"
+        lm_slope_ppt nlcd_summed_agr_diff avg_nlcd_wetland_pct avg_nlcd_shrub52_pct 
+           0.4340805           -0.3132095            0.3113827           -0.5398744 
+[1] "Principal component 8"
+ nlcd_summed_forest_diff   avg_nlcd_icesnow12_pct    avg_nlcd_barren31_pct avg_nlcd_openwater11_pct 
+               0.4264678                0.4097964                0.3153475               -0.4421897 
+
+
+
+PCAs overlaid with PCs
+```{r}
+require(scales)
+require(tidyverse)
+bg.fui = tibble(
+        ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+        ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+        color = paste0(c(
+                "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+                "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+                "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04"),"60")
+)
+
+bg.fui<-as.data.frame(bg.fui)
+
+       
+Y_dwl<- Y %>%
+        rownames_to_column() %>%
+        rename(lake_nhdid=rowname) %>%
+        select(lake_nhdid,avg_dwl_site)
+
+pc.scores <- as.data.frame(pc$scores)
+pc.scores<-pc.scores %>% 
+        rownames_to_column() %>%
+        rename(lake_nhdid=rowname) %>%
+        inner_join(.,Y_dwl, by=join_by(lake_nhdid)) %>%
+        mutate( col_hex = case_when(avg_dwl_site >=bg.fui[1,1] & avg_dwl_site <bg.fui[1,2] ~ bg.fui[1,3],
+                                    avg_dwl_site >=bg.fui[2,1] & avg_dwl_site <bg.fui[2,2] ~bg.fui[2,3], 
+                                    avg_dwl_site >=bg.fui[3,1] & avg_dwl_site <bg.fui[3,2] ~bg.fui[3,3]   , 
+                                    avg_dwl_site >=bg.fui[4,1] & avg_dwl_site <bg.fui[4,2] ~bg.fui[4,3]   , 
+                                    avg_dwl_site >=bg.fui[5,1] & avg_dwl_site <bg.fui[5,2] ~bg.fui[5,3]   , 
+                                    avg_dwl_site >=bg.fui[6,1] & avg_dwl_site <bg.fui[6,2] ~bg.fui[6,3]   , 
+                                    avg_dwl_site >=bg.fui[7,1] & avg_dwl_site <bg.fui[7,2] ~bg.fui[7,3]   , 
+                                    avg_dwl_site >=bg.fui[8,1] & avg_dwl_site <bg.fui[8,2] ~bg.fui[8,3]   , 
+                                    avg_dwl_site >=bg.fui[9,1] & avg_dwl_site <bg.fui[9,2] ~bg.fui[9,3]   , 
+                                    avg_dwl_site >=bg.fui[10,1] & avg_dwl_site <bg.fui[10,2] ~bg.fui[10,3]   , 
+                                    avg_dwl_site >=bg.fui[11,1] & avg_dwl_site <bg.fui[11,2] ~bg.fui[11,3]   , 
+                                    avg_dwl_site >=bg.fui[12,1] & avg_dwl_site <bg.fui[12,2] ~bg.fui[12,3]   , 
+                                    avg_dwl_site >=bg.fui[13,1] & avg_dwl_site <bg.fui[13,2] ~bg.fui[13,3]   , 
+                                    avg_dwl_site >=bg.fui[14,1] & avg_dwl_site <bg.fui[14,2] ~bg.fui[14,3]   , 
+                                    avg_dwl_site >=bg.fui[15,1] & avg_dwl_site <bg.fui[15,2] ~bg.fui[15,3]   , 
+                                    avg_dwl_site >=bg.fui[16,1] & avg_dwl_site <bg.fui[16,2] ~bg.fui[16,3]   , 
+                                    avg_dwl_site >=bg.fui[17,1] & avg_dwl_site <bg.fui[17,2] ~bg.fui[17,3]   , 
+                                    avg_dwl_site >=bg.fui[18,1] & avg_dwl_site <bg.fui[18,2] ~bg.fui[18,3]   , 
+                                    avg_dwl_site >=bg.fui[19,1] & avg_dwl_site <bg.fui[19,2] ~bg.fui[19,3]   , 
+                                    avg_dwl_site >=bg.fui[20,1] & avg_dwl_site <bg.fui[20,2] ~bg.fui[20,3]   , 
+                                    avg_dwl_site >=bg.fui[21,1] & avg_dwl_site <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
+
+
+# rename variable labels
+
+
+rownames(pc$loadings) <- c(
+        "Elevation (m)",
+        "Latitude",
+        "Longitutde",
+        "Lake area (ha)",
+        "Lake perimeter (m)",
+        "W.S. area (ha)",
+        "Temp (C)",
+        "Precip (ppt)",
+        "Temp slope",
+        "Precip slope",
+        "Range temp (C)",
+        "Forest diff",
+        "Wetland diff",
+        "Ag diff",
+        "Dev diff",
+        "Dev (%)",
+        "Ag (%)",
+        "Forest (%)",
+        "Wetland (%)",
+        "Icesnow (%)",
+        "Shrub (%)",
+        "Barren (%)",
+        "Openwater (%)"
+)
+
+
+
+
+i=1
+for(i in 1:8){
+load <- pc$loadings[, c(i,i+1)]
+load <- load[abs(load[,1])>0.3 | abs(load[,2])>0.3, ]
+
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/PCA/",Sys.Date(),"_PC",i,"_PC",i+1,"_SepScale.png"), width = 8, height=6, units = "in", res=400)
+par(mar=c(5,5,1,1), xpd=T)
+plot(pc.scores[,i+1], pc.scores[,i+2], pch = 19, col = pc.scores$col_hex, xlab=paste0("PC",i),ylab=paste0("PC",i+1))
+
+# scaling factor for arrow length
+scaling_factor <- c(11,10,10,10,10,10,10,10)[i]
+
+
+# Add arrows for loadings of PC1 and PC2
+arrows(0, 0, load[, 1] * scaling_factor, load[, 2] * scaling_factor, 
+       angle = 20, length = 0.1, col = "black")
+
+
+text(load[, 1] * scaling_factor, load[, 2] * scaling_factor,
+     labels = rownames(load), pos = 3, col = "black", cex = 1.1)
+dev.off()
+}
+
+rm(load)
+rm(scaling_factor)
+rm(bg.fui)
+rm(i)
+```
+
+
+Correlation between lake color and PCs
+```{r}
+lake_color<- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:23)))
+(round(RY<-cor(lake_color)[,1][2:9],digits=2))
+
+# Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 
+#  -0.04  -0.10  -0.61   0.10  -0.03  -0.10  -0.19  -0.02 
+```
+Component 3 (avg_annual_range_temp_degC, avg_nlcd_forest_pct, avg_nlcd_openwater11_pct) has the highest correlation with lake color, and no other principal components (components 1-23) have a correlation higher than 0.2 
+
+ 
+
+Multiple linear regression using a all PCs and combinations of PCs
+```{r}
+mlm <- lm(avg_dwl_site ~ ., data=lake_color) # all PCs
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:9))) # 1-9 PCs
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3,6,7)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3,2,6,7)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+# [1] 0.487073
+# [1] 0.4625903
+# [1] 0.421627
+# [1] 0.4326043
+# [1] 0.3743985
+```
+
+
+## FIG 6 - lake color and PC3
+```{r}
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3)),col_hex)
+mlm <- lm(avg_dwl_site ~  Comp.3, data=lake_color)
+summary_fit<-summary(mlm)
+#Adjusted R-squared:  0.3745
+r_squared <- summary_fit$r.squared
+p_value <- summary_fit$coefficients[, 4]
+
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PC3.png"), width = 7, height=5, units = "in", res=400)
+par(mar=c(3,3,1,1))
+plot(lake_color$Comp.3,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex)
+# add equation
+text(-15, 585, 
+     labels = bquote(y == .(round(summary_fit$coefficients[1,1], 2)) - .(round(abs(summary_fit$coefficients[2,1]), 2)) * x), 
+     pos = 4, col = "black", cex = 1.2, adj = 0)
+# Add R-squared and p-value text
+text(-15, 575, 
+     labels = bquote(R^2 == .(round(r_squared, 2))), 
+     pos = 4, col = "black", cex = 1.2, adj = 0)
+
+text(-15, 565, 
+     labels = bquote(italic(P) == .(format.pval(p_value, digits = 2))), 
+     pos = 4, col = "black", cex = 1.2, adj = 0)
+
+abline(lm(avg_dwl_site ~  Comp.3, data=lake_color),lwd=2)
+dev.off()
+```
+
+# Fig 6 MS stats
+```{r}
+summary_fit
+confint(mlm, level = 0.95)
+```
+                 2.5 %     97.5 %
+(Intercept) 533.255720 533.505075
+Comp.3       -9.688173  -9.518016
