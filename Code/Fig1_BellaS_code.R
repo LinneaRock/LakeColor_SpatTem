@@ -41,13 +41,18 @@ data <- data %>%
                              avg_dwl_site <=bg.fui[18,1] & avg_dwl_site <bg.fui[18,2] ~bg.fui[18,3]   , 
                              avg_dwl_site <=bg.fui[19,1] & avg_dwl_site <bg.fui[19,2] ~bg.fui[19,3]   , 
                              avg_dwl_site <=bg.fui[20,1] & avg_dwl_site <bg.fui[20,2] ~bg.fui[20,3]   , 
-                             avg_dwl_site <=bg.fui[21,1] & avg_dwl_site <bg.fui[21,2] ~bg.fui[21,3] , T~"black"))  
+                             avg_dwl_site <=bg.fui[21,1] & avg_dwl_site <bg.fui[21,2] ~bg.fui[21,3]   , 
+                             T~"black"))  
+
+#change black points to red for figure (above 590 dWL)
+data <- data %>%
+  mutate(col_hex = ifelse(col_hex == "black", "#9f4d04", col_hex))
 
 #figure 1 (a)- dwl averaged across all years
 states <- map_data("state")
 
 fig1a<-ggplot(data = data) + 
-  geom_point(data = data, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = data$col_hex, size = .75) +  # Add points
+  geom_point(data = data, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = data$col_hex, size = .1) +  # Add points
   scale_fill_distiller( palette="Spectral", direction=1)+
   theme_void()+
   coord_fixed(1.3) +
@@ -79,12 +84,13 @@ cols<- cols %>%
                               breaks >=bg.fui[18,1] & breaks <bg.fui[18,2] ~bg.fui[18,3]   , 
                               breaks >=bg.fui[19,1] & breaks <bg.fui[19,2] ~bg.fui[19,3]   , 
                               breaks >=bg.fui[20,1] & breaks <bg.fui[20,2] ~bg.fui[20,3]   , 
-                              breaks >=bg.fui[21,1] & breaks <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
+                              breaks >=bg.fui[21,1] & breaks <=bg.fui[21,2] ~bg.fui[21,3] ,
+                              T~"black"))
 
 png("fig1b.png", height=4, width=5, units="in", res=1200)
 par(mar=c(4,4,1,1))
 hist(data$avg_dwl_site, ylab="Number of lakes", xlab="Dominant wavelength (nm)",
-     breaks=cols$breaks, col = cols$col_hex, main="", ylim=c(0,8000))
+     breaks=cols$breaks, col = cols$col_hex, main="", ylim=c(0,8000), xlim=c(470,590))
 abline(v=530, col="black", lty="dashed",lwd=2)
 dev.off()
 
@@ -94,5 +100,25 @@ data %>%
 data %>% 
   filter(avg_dwl_site <= 530) %>% 
   nrow()
+
+#calculate avg dwl for each ecoregion
+data <-data %>% 
+  mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Coastal Plains",
+                                    epanutr_zoneid=="epanutr_2"~"Northern Appalachians",
+                                    epanutr_zoneid=="epanutr_3"~"Northern Plains",
+                                    epanutr_zoneid=="epanutr_4"~"Southern Appalachians",
+                                    epanutr_zoneid=="epanutr_5"~"Southern Plains",
+                                    epanutr_zoneid=="epanutr_6"~"Temperate Plains",
+                                    epanutr_zoneid=="epanutr_7"~"Upper Midwest",
+                                    epanutr_zoneid=="epanutr_8"~"Western Mountains",
+                                    epanutr_zoneid=="epanutr_9"~"Xeric", T~"black"))
+
+# summary table with the mean dwl and slope for each ecoregion
+mean_dwl_slope <- data %>%
+  group_by(ecoregion_name) %>%  
+  summarise(mean_dwl = mean(avg_dwl_site, na.rm = TRUE),
+            mean_slope = mean(lm_slope_color, na.rm = TRUE))  
+
+View(mean_dwl_slope)
 
 
