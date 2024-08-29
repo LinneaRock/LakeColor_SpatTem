@@ -152,6 +152,27 @@ date
 ```
 
 
+## 1a. Removing lakes that have dominant wavelengths outside of 470-590 for >5 observations. 28 lakes were removed from the analyses.
+```{r}
+temporal<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv", header=T,row.names=1)
+
+dWL_subset  <- temporal |>
+  filter(avg_dwl_year > 590 | 
+           avg_dwl_year < 470) |>
+  group_by(lagoslakeid) |>
+  count() |>
+  filter(n > 5) # 28 lakes
+
+delete_lakes <- dWL_subset$lagoslakeid
+
+temporal <- temporal |>
+  filter(!lagoslakeid %in% delete_lakes)
+
+```
+
+
+
+
 # 2. PRISM climate trends
 ```{r}
 require(tidyverse)
