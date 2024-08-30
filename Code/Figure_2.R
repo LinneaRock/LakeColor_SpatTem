@@ -13,7 +13,7 @@ library(ggpattern)
 
 
 # data downloaded from supercomputer to my hard drive because I'm not able to get sf to install to beartooth
-data <-readRDS("Data/2024-08-02_lakecolor_climate_landcover_trends.rds") |>
+data <-readRDS("Data/2024-08-29_lakecolor_climate_landcover_trends.rds") |>
   # add names of ecoregions
   mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Coastal Plains",
                                     epanutr_zoneid=="epanutr_2"~"Northern Appalachians",

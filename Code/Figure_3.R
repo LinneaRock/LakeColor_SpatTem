@@ -9,7 +9,7 @@ library(grid)
 
 
 # data downloaded from supercomputer to my hard drive because I'm not able to get sf to install to beartooth
-data <-readRDS("Data/2024-08-02_lakecolor_climate_landcover_trends.rds") |>
+data <-readRDS("Data/2024-08-29_lakecolor_climate_landcover_trends.rds") |>
   # add names of ecoregions
   mutate(ecoregion_name = case_when(epanutr_zoneid=="epanutr_1"~"Coastal Plains",
                                     epanutr_zoneid=="epanutr_2"~"Northern Appalachians",
@@ -33,7 +33,7 @@ data <-readRDS("Data/2024-08-02_lakecolor_climate_landcover_trends.rds") |>
 
 
 # the dataset above has one row per lake, but for this figure we need all data
-annual_data <- read.csv('Data/2024-08-02_lake_color_linear_models.csv')
+annual_data <- read.csv('Data/2024-08-29_lake_color_linear_models.csv')
 
 
 # 2. Create the arrows ####
@@ -180,3 +180,17 @@ ggsave('Figures/Figure3/histograms.png', height=12, width=5, units='in',dpi=1200
 # 6. Save datasets to make these figs ####
 write.csv(data_f3_a, 'Data/Figure3_timeseriesData.csv')
 write.csv(data_f3_b, 'Data/Figure3_histogramsData.csv')
+
+
+# what year did average data shift to blue? 
+blue <- data_f3_a |>
+  filter(trend_cat_switch == 'Shift to blue') |>
+  select(year, Nat_avgdwl_year) |>
+  distinct() # between 2002 and 2003
+
+
+# what year did average data shift to green? 
+green <- data_f3_a |>
+  filter(trend_cat_switch == 'Shift to green') |>
+  select(year, Nat_avgdwl_year) |>
+  distinct() # between  2003 and 2004, dips below line in 2005, then crosses again 2006
