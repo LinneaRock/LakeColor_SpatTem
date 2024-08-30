@@ -423,6 +423,6 @@ write_rds(trends_prism_landcover,"/project/lakecolor/data/02_Color_Climate_Landc
 
 ```{bash}
 chmod a-w *
-cp 2024-08-02_lakecolor_climate_landcover_trends.rds ..
+cp 2024-08-29_lakecolor_climate_landcover_trends.rds ..
 ```
 
