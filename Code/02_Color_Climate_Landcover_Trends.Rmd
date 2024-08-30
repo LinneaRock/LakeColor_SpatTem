@@ -9,7 +9,7 @@ output: pdf_document
 Request resources, move to directory, and load modules for R
 ```{bash}
 ssh jvonegge@beartooth.arcc.uwyo.edu
-cd /project/lakecolor/data_analysis/lakecolor_climate_landcover_alltrends
+cd /project/lakecolor/data
 
 salloc --mem=110GB --nodes=1 --cpus-per-task=8 --account=lakecolor --time=3:00:00
 
@@ -128,7 +128,7 @@ temporal_avg_lms <- limno %>%
         )
         )
 
-write.csv(temporal_avg_lms,"/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv")
+write.csv(temporal_avg_lms,"/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-02_lake_color_linear_models.csv")
 
 ```
 
@@ -143,7 +143,7 @@ run_2024-08-02_TEMPORAL_Avg_LM.sh
 #SBATCH --account=microbiome
 #SBATCH --output=temporal_lms_%A.out
 
-cd /project/lakecolor/data/02_Data_Analysis
+cd /project/lakecolor/data/02_Color_Climate_Landcover_Trends
 module load arcc/1.0  gcc/12.2.0 
 module load r/4.4.0
 
@@ -154,19 +154,27 @@ date
 
 ## 1a. Removing lakes that have dominant wavelengths outside of 470-590 for >5 observations. 28 lakes were removed from the analyses.
 ```{r}
-temporal<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv", header=T,row.names=1)
+require(tidyverse)
+temporal<-read.csv("/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-02_lake_color_linear_models.csv", header=T,row.names=1)
+nrow(temporal)
+# 2600058
 
 dWL_subset  <- temporal |>
   filter(avg_dwl_year > 590 | 
            avg_dwl_year < 470) |>
   group_by(lagoslakeid) |>
   count() |>
-  filter(n > 5) # 28 lakes
+  filter(n > 5) # 25 lakes
 
 delete_lakes <- dWL_subset$lagoslakeid
 
 temporal <- temporal |>
   filter(!lagoslakeid %in% delete_lakes)
+
+nrow(temporal)
+# 2599287
+
+write.csv(temporal,"/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-29_lake_color_linear_models.csv")
 
 ```
 
@@ -210,7 +218,7 @@ table(prism_trends$obs_year_prism) # all have 39 years
 summary(prism_trends) 
 
 
-write.csv(prism_trends,"/project/lakecolor/data/02_Data_Analysis/2024-08-02_Prism_climate_trends.csv")
+write.csv(prism_trends,"/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-02_Prism_climate_trends.csv")
 ```
 
 
@@ -219,13 +227,12 @@ write.csv(prism_trends,"/project/lakecolor/data/02_Data_Analysis/2024-08-02_Pris
 ```{r}
 require(tidyverse)
 # read in climate data
-prism<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_Prism_climate_trends.csv", header=T,row.names=1)
+prism<-read.csv("/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-02_Prism_climate_trends.csv", header=T,row.names=1)
 
 # read in temporal trend data
-trends<-read.csv("/project/lakecolor/data/02_Data_Analysis/2024-08-02_lake_color_linear_models.csv", header=T, row.names=1)
+trends<-read.csv("/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-29_lake_color_linear_models.csv", header=T, row.names=1)
 
 # rename columns to specify that this is lake color trends we are looking at
-
 trends<-trends %>%
         rename(lm_yint_color=lm_yint,
                lm_pval_color=lm_pval,
@@ -303,12 +310,12 @@ trends_avg <- trend_change %>%
         )%>%
         distinct()
 dim(trends_avg)
-#[1] 81875    30
+#[1] 81850    30
 
 # join the trend data and prism data
 trends_prism <- inner_join(trends_avg,prism, by= join_by(lake_nhdid))
 dim(trends_prism)
-#[1] 81874    37
+#[1]81849    37
 
 # read in landcover data, filter by lakes we have in trends, and average all columns
 landcover <- readRDS("/project/lakecolor/data/01_Compile_Filter_Data/2023-09-29_lagos_landcover_data.rds")
@@ -404,9 +411,12 @@ nlcd_summed_dev_diff= sum(nlcd_devlow22_pct[7],nlcd_devhi24_pct[7],nlcd_devmed23
 #merge landcover with prism and lake color trends
 trends_prism_landcover <- inner_join(trends_prism,landcover_avg_diff, by= join_by(lake_nhdid))
 dim(trends_prism_landcover)
-#[1] 81874    77
+#[1] 81849    77
 
-write_rds(trends_prism_landcover,"2024-08-02_lakecolor_climate_landcover_trends.rds")
+black_points <- trends_prism_landcover %>% filter(avg_dwl_site > 590)
+# no points that have an average dwl that is outside the color range
+
+write_rds(trends_prism_landcover,"/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-29_lakecolor_climate_landcover_trends.rds")
 ```
 
 # 4. Protect files in the 02_Data_Analysis folder and move a copy of the main file
