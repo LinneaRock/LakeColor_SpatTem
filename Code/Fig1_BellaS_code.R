@@ -5,7 +5,7 @@ library(maps)
 library(ggplot2)
 
 setwd("C:/Users/sadle/OneDrive/Documents/PhD/LakeColor_SpatTem")
-data <-readRDS("2024-08-02_lakecolor_climate_landcover_trends.rds")
+data <-readRDS("2024-08-29_lakecolor_climate_landcover_trends.rds")
 
 #color for manually created legend
 bg.fui = tibble(
