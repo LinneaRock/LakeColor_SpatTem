@@ -44,10 +44,6 @@ data <- data %>%
                              avg_dwl_site <=bg.fui[21,1] & avg_dwl_site <bg.fui[21,2] ~bg.fui[21,3]   , 
                              T~"black"))  
 
-#change black points to red for figure (above 590 dWL)
-data <- data %>%
-  mutate(col_hex = ifelse(col_hex == "black", "#9f4d04", col_hex))
-
 #figure 1 (a)- dwl averaged across all years
 states <- map_data("state")
 
