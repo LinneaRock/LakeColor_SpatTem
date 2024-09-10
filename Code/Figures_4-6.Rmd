@@ -370,213 +370,6 @@ ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/C
 ```
 
 
-### Plot Random Forest
-```{r}
-load("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/RandomForest/2024-06-27_random_forest_output_crossval_train.Rdata")
-
-require(randomForest)
-library(paletteer)
-require(ggplot2)
-```
-
-### Lollipop RF color and trends
-```{r}
-# create prettier lollipop plot 
-rF_imp<-as.data.frame(importance(rF_trend)) %>%
-       rownames_to_column(.,var="variables")
-
-# update names, fist print as the string that is easy to edit
-(paste0("c(", paste0('"', rF_imp$variables, '"', collapse = ", "), ")"))
-
-rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)", "Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual temperature range (deg C)", "Difference in forest 2001-2016 (%)", "Difference in wetland 2001-2016 (%)", "Difference in agriculture 2001-2016 (%)", "Difference in development 2001-2016 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
-
-rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) %>% slice_tail(n=10)
-
-
-ggplot(rF_imp, aes(y = MeanDecreaseGini, x = newvarnames)) +
-  geom_segment(aes(x = newvarnames, xend = newvarnames, y = 0, yend = MeanDecreaseGini), color = "black") +
-  geom_point(aes(color = MeanDecreaseGini), size = 4) +
-scale_color_paletteer_c("grDevices::Zissou 1", n = 30, direction=1) +
-        theme_light() +
-  coord_flip() +
-  theme(
-    panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-    panel.border = element_blank(),
-    axis.ticks.y = element_blank(), 
-axis.text = element_text(color = "black", size=15),  
-    axis.title = element_text(color = "black",size=15),  
-     legend.position = "none",
- plot.margin = unit(c(0.2, 0.6, 0.2, 0.2), "cm")) + 
-  xlab("") + 
-  ylab("Mean decrease in Gini") 
-
-
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_trend.png",width=6.7, height=4, units="in",dpi = 300)
-
-# create prettier lollipop plot for the color 
-rF_imp<-as.data.frame(importance(rF_color)) %>%
-       rownames_to_column(.,var="variables")
-
-# update names, fist print as the string that is easy to edit
-(paste0("c(", paste0('"', rF_imp$variables, '"', collapse = ", "), ")"))
-
-rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)", "Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual temperature range (deg C)", "Difference in forest 2001-2016 (%)", "Difference in wetland 2001-2016 (%)", "Difference in agriculture 2001-2016 (%)", "Difference in development 2001-2016 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
-
-rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) %>% slice_tail(n=10)
-
-
-ggplot(rF_imp, aes(y = MeanDecreaseGini, x = newvarnames)) +
-  geom_segment(aes(x = newvarnames, xend = newvarnames, y = 0, yend = MeanDecreaseGini), color = "black") +
-  geom_point(aes(color = MeanDecreaseGini), size = 4) +
-  scale_color_paletteer_c("grDevices::Zissou 1", n = 30, direction = 1) +
-  theme_light() +
-  coord_flip() +
-  theme(
-    panel.grid.major.y = element_blank(),
-            panel.grid.minor.x = element_blank(),
-    panel.border = element_blank(),
-    axis.ticks.y = element_blank(), 
-    axis.text = element_text(color = "black", size = 15),  
-    axis.title = element_text(color = "black", size = 15), 
-    legend.position = "none",
-    plot.margin = unit(c(0.2, 0.6, 0.2, 0.2), "cm")) + 
-  xlab("") + 
-  ylab("Mean decrease in Gini")
-
-
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_color.png",width=6.7, height=4, units="in",dpi = 300)
-```
-
-### Color confusion matrix
-```{r}
-require(caret)
-load("2024-05-16_regression_data.Rdata")
-
-
-# looking at blue vs green lakes
-X_N <- rownames_to_column(X, var = "rownames")
-Y_N <- rownames_to_column(Y, var = "rownames")
-lake_color <- inner_join(X_N,Y_N,by="rownames") %>% 
-        select(-c(trend_cat,trend_cat_switch,lm_slope_color,lm_pval_color)) %>%
-               column_to_rownames(var = "rownames") %>% 
-        mutate(color_category=case_when(avg_dwl_site > 530 ~ "Green", 
-                              avg_dwl_site < 530 ~ "Blue")) %>%
-        mutate(color_category=as.factor(color_category)) %>% 
-        select(-avg_dwl_site, -mean_range_dwl_site)
-
-
-set.seed(111)
-ind <- sample(2, nrow(lake_color), replace = TRUE, prob=c(0.8, 0.2))
-
-# First rF lookinag at the color category
-set.seed(111)
-(rF_color<-randomForest(color_category~.,data=lake_color[ind == 1,], mtry=5))
-rF_color_pred <- predict(rF_color, lake_color[ind == 2,])
-
-rF_color_pred_confus <-table(observed = lake_color[ind==2, "color_category"], predicted = rF_color_pred)
-
-
-require(caret)
-cm <- confusionMatrix(rF_color_pred,lake_color[ind==2, "color_category"], dnn=c('Predicted', 'Observed'))
-
-accuracy <- cm$overall
-
-cm <- as.data.frame(cm$table) |>
-  group_by(Observed) |>
-  mutate(prop = Freq/sum(Freq),
-         prop = round(prop,2))
-
-
-
-ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
-  geom_tile(color="black") +
-  scale_x_discrete(expand = c(0, 0))+ #remove white space
-  scale_y_discrete(expand = c(0, 0))+ #remove white space
-  scale_fill_gradient(low="white", high="orangered",
-                      name="Frequency") +
-  geom_text(aes(label = paste0("n=",Freq)), vjust = .5,  alpha = 1, size=5) +
-  geom_text(aes(label = paste0(prop*100,"%")), vjust = 2.0,  alpha = 1, size=4) +
-  custom_theme() +
-  theme(legend.position = 'none') +
-  labs(title = paste0("Accuracy: ",round(accuracy,2))) 
-
-ggsave("Figure4/CM_rF_color.png",width=3.7, height=2.5, units="in",dpi = 300)
-
-
-```
-
-
-### Trend confusion matrix
-```{r}
-
-# looking at basic trend categories (trending blue, trending green, not trending)
-lake_color <- inner_join(X_N,Y_N,by="rownames") %>% 
-        select(-c(trend_cat,trend_cat_switch,avg_dwl_site )) %>%
-               column_to_rownames(var = "rownames") %>% 
-        select(lm_slope_color,lm_pval_color, everything()) %>%
-        mutate(basic_trend_cat=case_when(lm_slope_color > 0 & lm_pval_color <= 0.05~ "Trending green", 
-                              lm_slope_color < 0 & lm_pval_color <= 0.05~ "Trending blue", 
-                              lm_pval_color > 0.05~ "No trend")) %>%
-        mutate(basic_trend_cat=as.factor(basic_trend_cat)) %>%
-        select(-c(lm_pval_color, lm_slope_color,mean_range_dwl_site))
-
-# without including the variability in DWL
-
-set.seed(111)
-(rF_basic_norange<-randomForest(basic_trend_cat~.,data=lake_color[ind == 1,], mtry=5))
-rF_basic_norange_pred <- predict(rF_basic_norange, lake_color[ind == 2,])
-rF_basic_norange_pred_confus <-table(observed = lake_color[ind==2, "basic_trend_cat"], predicted = rF_basic_norange_pred)
-
-
-require(caret)
-cm <- confusionMatrix(rF_basic_norange_pred,lake_color[ind==2, "basic_trend_cat"], dnn=c('Predicted', 'Observed'))
-
-accuracy <- cm$overall
-
-cm <- as.data.frame(cm$table) |>
-  group_by(Observed) |>
-  mutate(prop = Freq/sum(Freq),
-         prop = round(prop,2))
-
-
-
-ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
-  geom_tile(color="black") +
-  scale_x_discrete(expand = c(0, 0))+ #remove white space
-  scale_y_discrete(expand = c(0, 0))+ #remove white space
-  scale_fill_gradient(low="white", high="orangered",
-                      name="Frequency") +
-  geom_text(aes(label = paste0("n=",Freq)), vjust = .5,  alpha = 1, size=5) +
-  geom_text(aes(label = paste0(prop*100,"%")), vjust = 2.0,  alpha = 1, size=4) +
-  custom_theme() +
-  theme(legend.position = 'none') +
-  labs(title = paste0("Accuracy: ",round(accuracy,2))) 
-
-ggsave("Figure4/CM_rF_trend.png",width=6, height=2.5, units="in",dpi = 300)
-```
-
-
-```{r}
-# Custom theme
-  custom_theme <- function() {
-  theme_bw() +
-    theme(
-      text = element_text(color = "black", size = 13),
-      axis.text = element_text(color = "black",size = 13),
-      axis.title = element_text(color = "black",size = 13),
-      axis.title.x = element_text(margin = margin(t = 10)),
-      axis.title.y = element_text(margin = margin(r = 10)),
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-      plot.subtitle = element_text(hjust = 0.5, size = 12),
-      legend.text = element_text(size = 13),
-      legend.title = element_text(size = 13),
-      strip.text = element_text(size = 13, color = "black"))}
-```
-
-
-
-
 # Figure 5
 
 
@@ -585,15 +378,7 @@ require(tidyverse)
 
 lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
 nrow(lk)
-#[1] 81874
-
-# #filter lakes greater than 100,000 hectares
-# lk <- lk %>% filter(lake_waterarea_ha <= 100000) 
-# nrow(lk)
-# #[1] 81868 # removed 6 lakes greater than 100,00 hectares
-
-# remove lakes with wavelengths greater than 590
-lk <- lk %>% filter(avg_dwl_site < 590) 
+#[1] 81849
 
 # looking at blue vs green lakes
 lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)) %>% 
@@ -602,8 +387,7 @@ lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_p
     avg_dwl_site < 530 ~ "Blue"
   )) %>%
   mutate(color_category = as.factor(color_category)) %>% 
-  select(-avg_dwl_site, -mean_range_dwl_site) #%>%
- # filter(lake_waterarea_ha <= 100000)
+  select(-avg_dwl_site, -mean_range_dwl_site)
 
 # Log transform lake area, lake perimeter and watershed area
 lake_color<- lake_color %>%
@@ -627,7 +411,7 @@ new_names <- c(
   "lake_elevation_m" = "Lake elevation (m)",
   "lake_waterarea_ha" = "log(Lake area (ha))",
   "lake_perimeter_m" = "log(Lake perimeter (m))",
-  "avg_annual_range_temp_degC" = "Average annual\ntemperature range (deg C)",
+  "avg_annual_range_temp_degC" = "Average annual air3\ntemperature range (deg C)",
   "avg_nlcd_openwater11_pct" = "Average open water (%)"
 )
 
@@ -635,7 +419,19 @@ new_names <- c(
 lake_color_long <- lake_color_long %>%
   mutate(variable = recode(variable, !!!new_names))
 
-
+  custom_theme <- function() {
+ theme_classic() +
+    theme(
+      text = element_text(color = "black", size = 13),
+      axis.text = element_text(color = "black",size = 13),
+      axis.title = element_text(color = "black",size = 13),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 13),
+      strip.text = element_text(size = 13, color = "black"))}
 
 # Create density plots
 plt<-ggplot(lake_color_long, aes(x = value, fill = color_category)) +
@@ -645,11 +441,11 @@ plt<-ggplot(lake_color_long, aes(x = value, fill = color_category)) +
        y = "Density",
        fill="Lake color") +
           scale_fill_manual(values = c("Green" = "#759e72", "Blue"="#327cbb")) +
-  theme_classic() +
+custom_theme() +
   theme(legend.position = "top") 
         
 
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure_5_Density_plots_important_vars.png",width=12, height=6, units="in",dpi = 200)
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure_5_Density_plots_important_vars.png",width=15, height=5.5, units="in",dpi = 200)
 ```
 
 
@@ -662,15 +458,6 @@ require(tidyverse)
 
 lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
 nrow(lk)
-#[1] 81874
-
-# #filter lakes greater than 100,000 hectares
-# lk <- lk %>% filter(lake_waterarea_ha <= 100000) 
-# nrow(lk)
-# #[1] 81868 # removed 6 lakes greater than 100,00 hectares
-
-# remove lakes with wavelengths greater than 590
-lk <- lk %>% filter(avg_dwl_site < 590) 
 
 # looking at blue vs green lakes
 lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)) %>% 
@@ -679,14 +466,8 @@ lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_p
     avg_dwl_site < 530 ~ "Blue"
   )) %>%
   mutate(color_category = as.factor(color_category)) %>% 
-  select(-avg_dwl_site, -mean_range_dwl_site) #%>%
- # filter(lake_waterarea_ha <= 100000)
+  select(-avg_dwl_site, -mean_range_dwl_site) 
 
-# # Log transform lake area, lake perimeter and watershed area
-# lake_color<- lake_color %>%
-#         mutate(lake_waterarea_ha=log(lake_waterarea_ha),
-#                ws_area_ha=log(ws_area_ha),
-#                lake_perimeter_m=log(lake_perimeter_m))
 
 # Reshape data to long format
 lake_color_long <- lake_color %>%
@@ -704,7 +485,7 @@ new_names <- c(
   "lake_elevation_m" = "Lake elevation (m)",
   "lake_waterarea_ha" = "Lake area (ha)",
   "lake_perimeter_m" = "Lake perimeter (m)",
-  "avg_annual_range_temp_degC" = "Average annual\ntemperature range (deg C)",
+  "avg_annual_range_temp_degC" = "Average annual temperature range (deg C)",
   "avg_nlcd_openwater11_pct" = "Average open water (%)"
 )
 
@@ -720,22 +501,22 @@ summary_stats <- lake_color_long %>%
     sd_value = round(sd(value, na.rm = TRUE), digits=2)          
   )
 
+write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/Figure5_summary_stats.csv")
 
-
-# Assuming your dataframe is named lake_color_long, with columns: value, variable, and color_category
-t_test_results <- lake_color_long %>%
-  group_by(variable) %>% # Group by variable
-  summarise(
-    t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
-  ) %>%
-  mutate(
-    t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
-    p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
-    conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
-    conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
-  ) %>%
-  select(-t_test) %>%  # Remove the list column if you just want the summary statistics 
-        mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
+# # Assuming your dataframe is named lake_color_long, with columns: value, variable, and color_category
+# t_test_results <- lake_color_long %>%
+#   group_by(variable) %>% # Group by variable
+#   summarise(
+#     t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
+#   ) %>%
+#   mutate(
+#     t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
+#     p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
+#     conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
+#     conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
+#   ) %>%
+#   select(-t_test) %>%  # Remove the list column if you just want the summary statistics 
+#         mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
 ```
 
 
