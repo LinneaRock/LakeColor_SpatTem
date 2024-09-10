@@ -1,25 +1,25 @@
-"","variables","MeanDecreaseGini","newvarnames"
-"1","epanutr_zoneid",39.0388135884305,"Ecoregion"
-"2","nlcd_summed_dev_diff",149.100895481426,"Difference in development 2001-2016 (%)"
-"3","nlcd_summed_agr_diff",164.079883888197,"Difference in agriculture 2001-2016 (%)"
-"4","avg_nlcd_shrub52_pct",173.336078950794,"Average shrub (%)"
-"5","avg_nlcd_ag_pct",182.9960371421,"Average agriculture (%)"
-"6","avg_nlcd_icesnow12_pct",186.831154127197,"Average ice and snow (%)"
-"7","avg_nlcd_openwater11_pct",195.139416492513,"Average open water (%)"
-"8","avg_nlcd_wetland_pct",197.169904355607,"Average wetland (%)"
-"9","avg_nlcd_forest_pct",199.178596745653,"Average forest (%)"
-"10","nlcd_summed_forest_diff",199.758190083057,"Difference in forest 2001-2016 (%)"
-"11","nlcd_summed_wetland_diff",207.99079716219,"Difference in wetland 2001-2016 (%)"
-"12","avg_nlcd_barren31_pct",208.420376147607,"Average barren (%)"
-"13","avg_nlcd_dev_pct",213.053202129983,"Average development (%)"
-"14","avg_ppt",216.53594479889,"Average precipitation (ppt)"
-"15","lm_slope_ppt",224.791830406268,"Slope of precipitation over time"
-"16","avg_annual_range_temp_degC",225.275366927617,"Average annual temperature range (deg C)"
-"17","lake_lat_decdeg",228.250248531159,"Latitude (DD)"
-"18","avg_temp_degC",229.316184091674,"Average temperature (deg C)"
-"19","lm_slope_temp",229.873238636691,"Slope of temperature over time"
-"20","lake_perimeter_m",239.550903205649,"Lake perimeter (m)"
-"21","lake_waterarea_ha",242.366594232032,"Lake area (ha)"
-"22","lake_elevation_m",243.544629294692,"Lake elevation (m)"
-"23","lake_lon_decdeg",244.115453139785,"Longitude (DD)"
-"24","ws_area_ha",250.52721433816,"Watershed area (ha)"
+,variables,MeanDecreaseGini,newvarnames
+1,epanutr_zoneid,42.2,Ecoregion
+2,nlcd_summed_dev_diff,160.1,Difference in development 2001-2016 (%)
+3,nlcd_summed_agr_diff,163.5,Difference in agriculture 2001-2016 (%)
+4,avg_nlcd_shrub52_pct,168.7,Average shrub (%)
+5,avg_nlcd_ag_pct,181.4,Average agriculture (%)
+6,avg_nlcd_icesnow12_pct,187.1,Average ice and snow (%)
+7,avg_nlcd_openwater11_pct,192.8,Average open water (%)
+8,avg_nlcd_wetland_pct,192.9,Average wetland (%)
+9,avg_nlcd_forest_pct,196.8,Average forest (%)
+10,nlcd_summed_forest_diff,201.7,Difference in forest 2001-2016 (%)
+11,avg_nlcd_barren31_pct,202.5,Average barren (%)
+12,nlcd_summed_wetland_diff,210.2,Difference in wetland 2001-2016 (%)
+13,avg_ppt,213.9,Average precipitation (ppt)
+14,avg_nlcd_dev_pct,214.2,Average development (%)
+15,avg_temp_degC,222.7,Average temperature (deg C)
+16,avg_annual_range_temp_degC,225.5,Average annual temperature range (deg C)
+17,lake_lat_decdeg,227.5,Latitude (DD)
+18,lm_slope_ppt,229.9,Slope of precipitation over time
+19,lm_slope_temp,234.7,Slope of temperature over time
+20,lake_lon_decdeg,238.1,Longitude (DD)
+21,lake_waterarea_ha,239.0,Lake area (ha)
+22,lake_perimeter_m,243.9,Lake perimeter (m)
+23,ws_area_ha,249.2,Watershed area (ha)
+24,lake_elevation_m,251.8,Lake elevation (m)
