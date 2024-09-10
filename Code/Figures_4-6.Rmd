@@ -1,0 +1,856 @@
+---
+title: "Figures_4-6"
+author: "Jordan Von Eggers"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{bash}
+ssh jvonegge@beartooth.arcc.uwyo.edu
+cd /project/lakecolor/data/
+
+salloc --mem=110GB --nodes=1 --cpus-per-task=8 --account=lakecolor --time=3:00:00
+
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+R
+```
+
+# Custom theme
+```{r}
+  custom_theme <- function() {
+  theme_bw() +
+    theme(
+      text = element_text(color = "black", size = 13),
+      axis.text = element_text(color = "black",size = 13),
+      axis.title = element_text(color = "black",size = 13),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 13),
+      strip.text = element_text(size = 13, color = "black"))}
+```
+
+
+
+# Figure 4 
+Random forest with training dataset
+```{r}
+require(randomForest)
+require(tidyverse)
+require(caret)
+library(paletteer)
+require(ggplot2)
+```
+
+## Green vs blue random forest
+```{r}
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds") 
+nrow(lk) # 81849
+
+# looking at blue vs green lakes
+lake_color <- lk %>% 
+column_to_rownames(var = "lake_nhdid") %>% 
+  mutate(color_category = case_when(
+    avg_dwl_site > 530 ~ "Green", 
+    avg_dwl_site < 530 ~ "Blue"
+  )) %>%
+  mutate(color_category = as.factor(color_category)) %>% 
+select(        # random forest category
+                color_category,
+                # lake size and location variables
+                epanutr_zoneid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                ws_area_ha,
+                # climate variables
+                avg_temp_degC,
+                avg_ppt,
+                lm_slope_temp,
+                lm_slope_ppt,
+                avg_annual_range_temp_degC,
+                # landcover vars
+                nlcd_summed_forest_diff,
+                nlcd_summed_wetland_diff,
+                nlcd_summed_agr_diff,
+                nlcd_summed_dev_diff,
+                avg_nlcd_dev_pct,
+                avg_nlcd_ag_pct,
+                avg_nlcd_forest_pct,
+                avg_nlcd_wetland_pct,
+                avg_nlcd_icesnow12_pct,
+                avg_nlcd_shrub52_pct,
+                avg_nlcd_barren31_pct,
+                avg_nlcd_openwater11_pct
+        ) %>% na.omit() # some NAs for watershed area in the TX and GA lakes
+
+nrow(lake_color)
+#[1] 81773
+
+
+# count number of observations for blue and green by eco region
+category_counts <- lake_color %>%
+  group_by(epanutr_zoneid, color_category) %>% 
+  summarise(n = n(), .groups = 'drop')
+
+# subset equally lakes within each ecoregion
+set.seed(111)
+train <- lake_color %>%
+  group_by(epanutr_zoneid) %>%
+  sample_frac(.8) %>% #80% of data will be used for training
+  ungroup() 
+ 
+validate <- lake_color %>%
+   anti_join(train)
+
+# First rF looking at the color category
+set.seed(111)
+(rF_color <- randomForest(color_category ~ ., data = train, mtry = 5))
+```
+Call:
+ randomForest(formula = color_category ~ ., data = train, mtry = 5) 
+               Type of random forest: classification
+                     Number of trees: 500
+No. of variables tried at each split: 5
+
+        OOB estimate of  error rate: 14.83%
+Confusion matrix:
+       Blue Green class.error
+Blue  23014  5002   0.1785408
+Green  4702 32700   0.1257152
+
+```{r}
+# percent of correct classifications
+round((1- 0.1785408)*100,digits=1) # 82.1 - blue
+round((1- 0.1257152)*100,digits=1) # 87.4 - green
+
+rF_color_pred <- predict(rF_color, validate)
+rF_color_pred_confus <-table(observed = validate$color_category, predicted = rF_color_pred)
+
+rm(lake_color);rm(lk)
+#save.image(paste0(Sys.Date(),"_random_forest_color.Rdata"))
+```
+
+
+```{r}
+load("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/2024-09-10_random_forest_color.Rdata")
+
+
+cm <- confusionMatrix(rF_color_pred,validate$color_category, dnn=c('Predicted', 'Observed'))
+
+accuracy <- cm$overall
+
+cm <- as.data.frame(cm$table) |>
+  group_by(Observed) |>
+  mutate(prop = Freq/sum(Freq),
+         prop = round(prop,2))
+
+
+ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
+  geom_tile(color="black") +
+  scale_x_discrete(expand = c(0, 0))+ #remove white space
+  scale_y_discrete(expand = c(0, 0))+ #remove white space
+  scale_fill_gradient(low="white", high="orangered",
+                      name="Frequency") +
+  geom_text(aes(label = paste0("n=",Freq)), vjust = .5,  alpha = 1, size=5) +
+  geom_text(aes(label = paste0(prop*100,"%")), vjust = 2.0,  alpha = 1, size=4) +
+  custom_theme() +
+  theme(legend.position = 'none') +
+  labs(title = paste0("Accuracy: ",round(accuracy,2))) 
+
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/CM_rF_color.png",width=3.7, height=2.5, units="in",dpi = 300)
+
+
+
+
+# create prettier lollipop plot for the color 
+rF_imp<-as.data.frame(importance(rF_color)) %>%
+       rownames_to_column(.,var="variables")
+
+# update names, fist print as the string that is easy to edit
+(paste0("c(", paste0('"', rF_imp$variables, '"', collapse = ", "), ")"))
+
+rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)", "Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2001-2016 (%)", "Difference in wetland 2001-2016 (%)", "Difference in agriculture 2001-2016 (%)", "Difference in development 2001-2016 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
+
+rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) 
+write.csv(rF_imp, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/rF_importance_color.csv")
+
+rF_imp <- rF_imp %>% slice_tail(n=10) # just plot the top 10
+
+
+ggplot(rF_imp, aes(y = MeanDecreaseGini, x = newvarnames)) +
+  geom_segment(aes(x = newvarnames, xend = newvarnames, y = 0, yend = MeanDecreaseGini), color = "black") +
+  geom_point(aes(color = MeanDecreaseGini), size = 4) +
+  scale_color_paletteer_c("grDevices::Zissou 1", n = 30, direction = 1) +
+  theme_light() +
+  coord_flip() +
+  theme(
+    panel.grid.major.y = element_blank(),
+            panel.grid.minor.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank(), 
+    axis.text = element_text(color = "black", size = 15),  
+    axis.title = element_text(color = "black", size = 15), 
+    legend.position = "none",
+    plot.margin = unit(c(0.2, 0.6, 0.2, 0.2), "cm")) + 
+  xlab("") + 
+  ylab("Mean decrease in Gini")
+
+
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_color.png",width=6.7, height=4, units="in",dpi = 300)
+```
+total number of lakes:
+[1] 81773
+
+
+## Trending green, trending blue, no trend random forest
+```{r}
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds") 
+nrow(lk) 
+
+
+# looking at basic trend categories (trending blue, trending green, not trending)
+lake_color <- lk %>% 
+column_to_rownames(var = "lake_nhdid") %>% 
+mutate(basic_trend_cat=case_when(lm_slope_color > 0 & lm_pval_color <= 0.05~ "Trending green", 
+                              lm_slope_color < 0 & lm_pval_color <= 0.05~ "Trending blue", 
+                              lm_pval_color > 0.05~ "No trend")) %>%
+        mutate(basic_trend_cat=as.factor(basic_trend_cat)) %>% 
+select(        # random forest category
+               basic_trend_cat,
+                # lake size and location variables
+                epanutr_zoneid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                ws_area_ha,
+                # climate variables
+                avg_temp_degC,
+                avg_ppt,
+                lm_slope_temp,
+                lm_slope_ppt,
+                avg_annual_range_temp_degC,
+                # landcover vars
+                nlcd_summed_forest_diff,
+                nlcd_summed_wetland_diff,
+                nlcd_summed_agr_diff,
+                nlcd_summed_dev_diff,
+                avg_nlcd_dev_pct,
+                avg_nlcd_ag_pct,
+                avg_nlcd_forest_pct,
+                avg_nlcd_wetland_pct,
+                avg_nlcd_icesnow12_pct,
+                avg_nlcd_shrub52_pct,
+                avg_nlcd_barren31_pct,
+                avg_nlcd_openwater11_pct
+        ) %>% na.omit() # some NAs for watershed area in the TX and GA lakes
+
+nrow(lake_color)
+#[1] 81773
+
+# count number of observations for blue and green and no trend by eco region
+category_counts <- lake_color %>%
+  group_by(epanutr_zoneid, basic_trend_cat) %>% 
+  summarise(n = n(), .groups = 'drop')
+
+# what is the minimum number of observations of one of the categories to subset by
+min(category_counts$n)
+#341
+
+# sample 340 lakes from each ecoregion to make the number of trend categories even
+data_subset <- lake_color %>%
+  group_by(epanutr_zoneid, basic_trend_cat) %>%
+  slice_sample(n = 340, replace = FALSE)  
+
+
+set.seed(111)
+train <- data_subset %>%
+  group_by(epanutr_zoneid) %>%
+  sample_frac(.8) %>% #80% of data will be used for training
+  ungroup() 
+ 
+validate <- data_subset %>%
+   anti_join(train)
+
+set.seed(111)
+(rF_trend<-randomForest(basic_trend_cat~.,data=train, mtry=5))
+```
+
+Call:
+ randomForest(formula = basic_trend_cat ~ ., data = train, mtry = 5) 
+               Type of random forest: classification
+                     Number of trees: 500
+No. of variables tried at each split: 5
+
+        OOB estimate of  error rate: 53.43%
+Confusion matrix:
+               No trend Trending blue Trending green class.error
+No trend            890           806            752   0.6364379
+Trending blue       664          1365            425   0.4437653
+Trending green      698           579           1165   0.5229320
+
+```{r}
+# percent of correct classifications
+round((1-0.6364379)*100,digits=1) # 36.4 - no trend
+round((1-0.4437653)*100,digits=1) # 55.6 - trending blue
+round((1-0.5229320)*100,digits=1) # 47.7 - trending green
+
+
+rm(lake_color);rm(lk)
+save.image(paste0(Sys.Date(),"_random_forest_trend.Rdata"))
+```
+
+
+```{r}
+load("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/2024-09-10_random_forest_trend.Rdata")
+
+rF_trend_pred <- predict(rF_trend, validate)
+rF_trend_pred_confus <-table(observed =  validate$basic_trend_cat, predicted = rF_trend_pred)
+
+cm <- confusionMatrix(rF_trend_pred,validate$basic_trend_cat, dnn=c('Predicted', 'Observed'))
+
+accuracy <- cm$overall
+
+cm <- as.data.frame(cm$table) |>
+  group_by(Observed) |>
+  mutate(prop = Freq/sum(Freq),
+         prop = round(prop,2))
+
+
+
+ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
+  geom_tile(color="black") +
+  scale_x_discrete(expand = c(0, 0))+ #remove white space
+  scale_y_discrete(expand = c(0, 0))+ #remove white space
+  scale_fill_gradient(low="white", high="orangered",
+                      name="Frequency") +
+  geom_text(aes(label = paste0("n=",Freq)), vjust = .5,  alpha = 1, size=5) +
+  geom_text(aes(label = paste0(prop*100,"%")), vjust = 2.0,  alpha = 1, size=4) +
+  custom_theme() +
+  theme(legend.position = 'none') +
+  labs(title = paste0("Accuracy: ",round(accuracy,2))) 
+
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/CM_rF_trend.png",width=6, height=2.5, units="in",dpi = 300)
+
+
+
+# create prettier lollipop plot 
+rF_imp<-as.data.frame(importance(rF_trend)) %>%
+       rownames_to_column(.,var="variables")
+
+# update names, fist print as the string that is easy to edit
+(paste0("c(", paste0('"', rF_imp$variables, '"', collapse = ", "), ")"))
+
+rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)", "Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2001-2016 (%)", "Difference in wetland 2001-2016 (%)", "Difference in agriculture 2001-2016 (%)", "Difference in development 2001-2016 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
+
+rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) 
+write.csv(rF_imp, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/rF_importance_trend.csv")
+
+rF_imp <- rF_imp %>% slice_tail(n=10) # just plot the top 10
+
+
+ggplot(rF_imp, aes(y = MeanDecreaseGini, x = newvarnames)) +
+  geom_segment(aes(x = newvarnames, xend = newvarnames, y = 0, yend = MeanDecreaseGini), color = "black") +
+  geom_point(aes(color = MeanDecreaseGini), size = 4) +
+scale_color_paletteer_c("grDevices::Zissou 1", n = 30, direction=1) +
+        theme_light() +
+  coord_flip() +
+  theme(
+    panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank(), 
+axis.text = element_text(color = "black", size=15),  
+    axis.title = element_text(color = "black",size=15),  
+     legend.position = "none",
+ plot.margin = unit(c(0.2, 0.6, 0.2, 0.2), "cm")) + 
+  xlab("") + 
+  ylab("Mean decrease in Gini") 
+
+
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_trend.png",width=6.9, height=4, units="in",dpi = 300)
+
+```
+nrow(train)+nrow(validate)
+[1] 9180 # number of lakes included
+
+# Figure 5
+
+
+```{r}
+require(tidyverse)
+
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
+nrow(lk)
+#[1] 81849
+
+# looking at blue vs green lakes
+lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)) %>% 
+  mutate(color_category = case_when(
+    avg_dwl_site > 530 ~ "Green", 
+    avg_dwl_site < 530 ~ "Blue"
+  )) %>%
+  mutate(color_category = as.factor(color_category)) %>% 
+  select(-avg_dwl_site, -mean_range_dwl_site)
+
+# Log transform lake area, lake perimeter and watershed area
+lake_color<- lake_color %>%
+        mutate(lake_waterarea_ha=log(lake_waterarea_ha),
+               ws_area_ha=log(ws_area_ha),
+               lake_perimeter_m=log(lake_perimeter_m))
+
+# Reshape data to long format
+lake_color_long <- lake_color %>%
+  pivot_longer(cols = c("avg_nlcd_forest_pct", "lake_lon_decdeg", "lake_lat_decdeg", "avg_temp_degC", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha", "lake_perimeter_m", "avg_annual_range_temp_degC", "avg_nlcd_openwater11_pct"), 
+               names_to = "variable", 
+               values_to = "value")
+
+# Create a named vector for renaming the variables
+new_names <- c(
+  "avg_nlcd_forest_pct" = "Average forest (%)",
+  "lake_lon_decdeg" = "Longitude (DD)",
+  "lake_lat_decdeg" = "Latitude (DD)",
+  "avg_temp_degC" = "Average temperature (deg C)",
+  "ws_area_ha" = "log(Watershed area (ha))",
+  "lake_elevation_m" = "Lake elevation (m)",
+  "lake_waterarea_ha" = "log(Lake area (ha))",
+  "lake_perimeter_m" = "log(Lake perimeter (m))",
+  "avg_annual_range_temp_degC" = "Average annual air\ntemperature range (deg C)",
+  "avg_nlcd_openwater11_pct" = "Average open water (%)"
+)
+
+# Rename the variables using recode
+lake_color_long <- lake_color_long %>%
+  mutate(variable = recode(variable, !!!new_names))
+
+  custom_theme <- function() {
+ theme_classic() +
+    theme(
+      text = element_text(color = "black", size = 13),
+      axis.text = element_text(color = "black",size = 13),
+      axis.title = element_text(color = "black",size = 13),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 13),
+      strip.text = element_text(size = 13, color = "black"))}
+
+# Create density plots
+plt<-ggplot(lake_color_long, aes(x = value, fill = color_category)) +
+  geom_density(alpha = 0.7) +
+  facet_wrap(~ variable, nrow=2,scales = "free") +
+  labs(x = "",
+       y = "Density",
+       fill="Lake color") +
+          scale_fill_manual(values = c("Green" = "#759e72", "Blue"="#327cbb")) +
+custom_theme() +
+  theme(legend.position = "top") 
+        
+
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure_5_Density_plots_important_vars.png",width=15, height=5.5, units="in",dpi = 200)
+```
+
+
+
+
+## MS stats
+```{r}
+
+require(tidyverse)
+
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
+nrow(lk)
+
+# looking at blue vs green lakes
+lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)) %>% 
+  mutate(color_category = case_when(
+    avg_dwl_site > 530 ~ "Green", 
+    avg_dwl_site < 530 ~ "Blue"
+  )) %>%
+  mutate(color_category = as.factor(color_category)) %>% 
+  select(-avg_dwl_site, -mean_range_dwl_site) 
+
+
+# Reshape data to long format
+lake_color_long <- lake_color %>%
+  pivot_longer(cols = c("avg_nlcd_forest_pct", "lake_lon_decdeg", "lake_lat_decdeg", "avg_temp_degC", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha", "lake_perimeter_m", "avg_annual_range_temp_degC", "avg_nlcd_openwater11_pct"), 
+               names_to = "variable", 
+               values_to = "value")
+
+# Create a named vector for renaming the variables
+new_names <- c(
+  "avg_nlcd_forest_pct" = "Average forest (%)",
+  "lake_lon_decdeg" = "Longitude (DD)",
+  "lake_lat_decdeg" = "Latitude (DD)",
+  "avg_temp_degC" = "Average temperature (deg C)",
+  "ws_area_ha" = "Watershed area (ha)",
+  "lake_elevation_m" = "Lake elevation (m)",
+  "lake_waterarea_ha" = "Lake area (ha)",
+  "lake_perimeter_m" = "Lake perimeter (m)",
+  "avg_annual_range_temp_degC" = "Average annual temperature range (deg C)",
+  "avg_nlcd_openwater11_pct" = "Average open water (%)"
+)
+
+# Rename the variables using recode
+lake_color_long <- lake_color_long %>%
+  mutate(variable = recode(variable, !!!new_names))
+
+
+summary_stats <- lake_color_long %>%
+  group_by(variable, color_category) %>% 
+  summarise(
+    mean_value = round(mean(value, na.rm = TRUE),digits=2),      
+    sd_value = round(sd(value, na.rm = TRUE), digits=2)          
+  )
+
+write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/Figure5_summary_stats.csv")
+
+
+
+# # Assuming your dataframe is named lake_color_long, with columns: value, variable, and color_category
+# t_test_results <- lake_color_long %>%
+#   group_by(variable) %>% # Group by variable
+#   summarise(
+#     t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
+#   ) %>%
+#   mutate(
+#     t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
+#     p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
+#     conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
+#     conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
+#   ) %>%
+#   select(-t_test) %>%  # Remove the list column if you just want the summary statistics 
+#         mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
+```
+
+
+
+# Figure 6
+## PCA
+```{r}
+require(tidyverse)
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
+nrow(lk)
+#[1] 81849
+
+# select the variables you want to work on, but it will automatically grab date and lake_ndhid
+X <- lk %>%
+        select(
+                # lake size and location variables
+                lake_nhdid,
+                lake_elevation_m,
+                lake_lat_decdeg,
+                lake_lon_decdeg,
+                lake_waterarea_ha,
+                lake_perimeter_m,
+                ws_area_ha,
+                # climate variables
+                avg_temp_degC,
+                avg_ppt,
+                lm_slope_temp,
+                lm_slope_ppt,
+                avg_annual_range_temp_degC,
+                # landcover vars
+                nlcd_summed_forest_diff,
+                nlcd_summed_wetland_diff,
+                nlcd_summed_agr_diff,
+                nlcd_summed_dev_diff,
+                avg_nlcd_dev_pct,
+                avg_nlcd_ag_pct,
+                avg_nlcd_forest_pct,
+                avg_nlcd_wetland_pct,
+                avg_nlcd_icesnow12_pct,
+                avg_nlcd_shrub52_pct,
+                avg_nlcd_barren31_pct,
+                avg_nlcd_openwater11_pct
+        )
+dim(X)
+#[1]  81849    24
+
+X <- X %>%
+       column_to_rownames(var = "lake_nhdid") %>% distinct() %>% drop_na()
+dim(X)
+#[1] 81773    23
+
+Y <- lk %>%
+               filter(lake_nhdid%in%rownames(X))%>%
+        select(lake_nhdid,avg_dwl_site, trend_cat, trend_cat_switch, lm_slope_color, lm_pval_color)
+ 
+Y <- Y %>%
+       column_to_rownames(var = "lake_nhdid") %>% distinct() %>% drop_na()
+dim(Y)
+#[1] 81772     5
+
+X <- X %>% filter(rownames(.)%in%rownames(Y))
+dim(X)
+#[1]  81772    23
+
+rm(list=ls()[! ls() %in% c("Y", "X")])
+
+# run PCA
+R <- cor(X)
+round(R,4)
+
+pc <- princomp(X, cor=T)
+```
+
+
+```{r}
+(spc <- summary(pc, loadings=T, cutoff=0.3))
+#lambda <- pc$sd^2
+plot(pc, type="lines", main = "")
+```
+Keep 8 PCs
+
+```{r}
+for (i in 1:8){
+print(paste0("Principal component ",i))
+print(pc$loadings[which(abs(pc$loadings[,i])>0.3),i])
+}
+```
+[1] "Principal component 1"
+lake_elevation_m  lake_lat_decdeg  lake_lon_decdeg    avg_temp_degC          avg_ppt 
+       0.3091502        0.3555449       -0.3020105       -0.3834401       -0.3549859 
+[1] "Principal component 2"
+      lake_elevation_m          lm_slope_temp    avg_nlcd_forest_pct avg_nlcd_icesnow12_pct 
+             0.3479156              0.3955738              0.3096396              0.3701239 
+[1] "Principal component 3"
+avg_annual_range_temp_degC        avg_nlcd_forest_pct   avg_nlcd_openwater11_pct 
+                -0.3600478                  0.4346655                 -0.3145581 
+[1] "Principal component 4"
+lake_waterarea_ha  lake_perimeter_m        ws_area_ha 
+       -0.5487974        -0.5852858        -0.4413294 
+[1] "Principal component 5"
+nlcd_summed_agr_diff     avg_nlcd_dev_pct      avg_nlcd_ag_pct 
+           0.3999372            0.3594142           -0.5176130 
+[1] "Principal component 6"
+nlcd_summed_dev_diff     avg_nlcd_dev_pct avg_nlcd_wetland_pct 
+           0.4897053            0.4236186           -0.3664174 
+[1] "Principal component 7"
+        lm_slope_ppt nlcd_summed_agr_diff avg_nlcd_wetland_pct avg_nlcd_shrub52_pct 
+           0.4342863           -0.3126998            0.3114225           -0.5396761 
+[1] "Principal component 8"
+ nlcd_summed_forest_diff   avg_nlcd_icesnow12_pct    avg_nlcd_barren31_pct avg_nlcd_openwater11_pct 
+               0.4281223                0.4102663                0.3070859               -0.4424409 
+
+
+
+PCAs overlaid with PCs
+```{r}
+require(scales)
+require(tidyverse)
+bg.fui = tibble(
+        ymin = c(470,475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583),
+        ymax = c(475,480,485,489,495,509,530,549,559,564,567,568,569,570,573,575,577,579,581,583,590),
+        color = paste0(c(
+                "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+                "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+                "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04"),"60")
+)
+
+bg.fui<-as.data.frame(bg.fui)
+
+       
+Y_dwl<- Y %>%
+        rownames_to_column() %>%
+        rename(lake_nhdid=rowname) %>%
+        select(lake_nhdid,avg_dwl_site)
+
+pc.scores <- as.data.frame(pc$scores)
+pc.scores<-pc.scores %>% 
+        rownames_to_column() %>%
+        rename(lake_nhdid=rowname) %>%
+        inner_join(.,Y_dwl, by=join_by(lake_nhdid)) %>%
+        mutate( col_hex = case_when(avg_dwl_site >=bg.fui[1,1] & avg_dwl_site <bg.fui[1,2] ~ bg.fui[1,3],
+                                    avg_dwl_site >=bg.fui[2,1] & avg_dwl_site <bg.fui[2,2] ~bg.fui[2,3], 
+                                    avg_dwl_site >=bg.fui[3,1] & avg_dwl_site <bg.fui[3,2] ~bg.fui[3,3]   , 
+                                    avg_dwl_site >=bg.fui[4,1] & avg_dwl_site <bg.fui[4,2] ~bg.fui[4,3]   , 
+                                    avg_dwl_site >=bg.fui[5,1] & avg_dwl_site <bg.fui[5,2] ~bg.fui[5,3]   , 
+                                    avg_dwl_site >=bg.fui[6,1] & avg_dwl_site <bg.fui[6,2] ~bg.fui[6,3]   , 
+                                    avg_dwl_site >=bg.fui[7,1] & avg_dwl_site <bg.fui[7,2] ~bg.fui[7,3]   , 
+                                    avg_dwl_site >=bg.fui[8,1] & avg_dwl_site <bg.fui[8,2] ~bg.fui[8,3]   , 
+                                    avg_dwl_site >=bg.fui[9,1] & avg_dwl_site <bg.fui[9,2] ~bg.fui[9,3]   , 
+                                    avg_dwl_site >=bg.fui[10,1] & avg_dwl_site <bg.fui[10,2] ~bg.fui[10,3]   , 
+                                    avg_dwl_site >=bg.fui[11,1] & avg_dwl_site <bg.fui[11,2] ~bg.fui[11,3]   , 
+                                    avg_dwl_site >=bg.fui[12,1] & avg_dwl_site <bg.fui[12,2] ~bg.fui[12,3]   , 
+                                    avg_dwl_site >=bg.fui[13,1] & avg_dwl_site <bg.fui[13,2] ~bg.fui[13,3]   , 
+                                    avg_dwl_site >=bg.fui[14,1] & avg_dwl_site <bg.fui[14,2] ~bg.fui[14,3]   , 
+                                    avg_dwl_site >=bg.fui[15,1] & avg_dwl_site <bg.fui[15,2] ~bg.fui[15,3]   , 
+                                    avg_dwl_site >=bg.fui[16,1] & avg_dwl_site <bg.fui[16,2] ~bg.fui[16,3]   , 
+                                    avg_dwl_site >=bg.fui[17,1] & avg_dwl_site <bg.fui[17,2] ~bg.fui[17,3]   , 
+                                    avg_dwl_site >=bg.fui[18,1] & avg_dwl_site <bg.fui[18,2] ~bg.fui[18,3]   , 
+                                    avg_dwl_site >=bg.fui[19,1] & avg_dwl_site <bg.fui[19,2] ~bg.fui[19,3]   , 
+                                    avg_dwl_site >=bg.fui[20,1] & avg_dwl_site <bg.fui[20,2] ~bg.fui[20,3]   , 
+                                    avg_dwl_site >=bg.fui[21,1] & avg_dwl_site <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
+
+
+# rename variable labels
+
+
+rownames(pc$loadings) <- c(
+        "Elevation (m)",
+        "Latitude",
+        "Longitutde",
+        "Lake area (ha)",
+        "Lake perimeter (m)",
+        "W.S. area (ha)",
+        "Temp (C)",
+        "Precip (ppt)",
+        "Temp slope",
+        "Precip slope",
+        "Range temp (C)",
+        "Forest diff",
+        "Wetland diff",
+        "Ag diff",
+        "Dev diff",
+        "Dev (%)",
+        "Ag (%)",
+        "Forest (%)",
+        "Wetland (%)",
+        "Icesnow (%)",
+        "Shrub (%)",
+        "Barren (%)",
+        "Openwater (%)"
+)
+
+
+
+
+i=1
+for(i in 1:8){
+load <- pc$loadings[, c(i,i+1)]
+load <- load[abs(load[,1])>0.3 | abs(load[,2])>0.3, ]
+
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/PCA/",Sys.Date(),"_PC",i,"_PC",i+1,"_SepScale.png"), width = 8, height=6, units = "in", res=400)
+par(mar=c(5,5,1,1), xpd=T)
+plot(pc.scores[,i+1], pc.scores[,i+2], pch = 19, col = pc.scores$col_hex, xlab=paste0("PC",i),ylab=paste0("PC",i+1))
+
+# scaling factor for arrow length
+scaling_factor <- c(11,10,10,10,10,10,10,10)[i]
+
+
+# Add arrows for loadings of PC1 and PC2
+arrows(0, 0, load[, 1] * scaling_factor, load[, 2] * scaling_factor, 
+       angle = 20, length = 0.1, col = "black")
+
+
+text(load[, 1] * scaling_factor, load[, 2] * scaling_factor,
+     labels = rownames(load), pos = 3, col = "black", cex = 1.1)
+dev.off()
+}
+
+rm(load)
+rm(scaling_factor)
+rm(bg.fui)
+rm(i)
+```
+
+
+Correlation between lake color and PCs
+```{r}
+lake_color<- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:23)))
+(round(RY<-cor(lake_color)[,1][2:9],digits=2))
+(round(RY<-cor(lake_color)[,1][2:24],digits=2)) # only principle component 3 greater than 0.2
+
+# Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 
+#  -0.04  -0.11  -0.62   0.05  -0.03  -0.10  -0.19  -0.02 
+```
+Component 3 (avg_annual_range_temp_degC, avg_nlcd_forest_pct, avg_nlcd_openwater11_pct) has the highest correlation with lake color, and no other principal components (components 1-23) have a correlation higher than 0.2 
+
+ 
+
+Multiple linear regression using a all PCs and combinations of PCs
+```{r}
+mlm <- lm(avg_dwl_site ~ ., data=lake_color) # all PCs
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:9))) # 1-9 PCs
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3,6,7)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3,2,6,7)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3)))
+mlm <- lm(avg_dwl_site ~ ., data=lake_color)
+summary(mlm)$r.squared
+
+# [1] 0.4870211
+# [1] 0.461277
+# [1] 0.4290596
+# [1] 0.4401554
+# [1] 0.3815063
+```
+
+
+## FIG 6 - lake color and PC3
+```{r}
+lake_color <- pc.scores %>% select(avg_dwl_site,  paste0("Comp.",c(3)),col_hex)
+mlm <- lm(avg_dwl_site ~  Comp.3, data=lake_color)
+summary_fit<-summary(mlm)
+r_squared <- summary_fit$r.squared
+p_value <- summary_fit$coefficients[, 4]
+
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PC3.png"), width = 7, height=5, units = "in", res=400)
+par(mar=c(3,3,1,1))
+plot(lake_color$Comp.3,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex, xlim=c(-9,8))
+# add equation
+text(8.1, 580, 
+     labels = bquote(y == .(round(summary_fit$coefficients[1,1], 2)) - .(round(abs(summary_fit$coefficients[2,1]), 2)) * x), 
+      col = "black", cex = 1.2, adj = 1)
+# Add R-squared and p-value text
+text(8.1, 570, 
+     labels = bquote(R^2 == .(round(r_squared, 2))), 
+        col = "black", cex = 1.2, adj = 1)
+
+text(8.1, 560, 
+     labels = bquote(italic(P) == .(format.pval(p_value, digits = 2))), 
+     col = "black", cex = 1.2, adj = 1)
+
+abline(lm(avg_dwl_site ~  Comp.3, data=lake_color),lwd=2)
+dev.off()
+```
+
+## MS stats
+```{r}
+summary_fit
+confint(mlm, level = 0.95)
+```
+Call:
+lm(formula = avg_dwl_site ~ Comp.3, data = lake_color)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-119.030  -13.195    0.397   13.091   72.617 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 533.37060    0.06323  8435.1   <2e-16 ***
+Comp.3       -9.69358    0.04316  -224.6   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 18.08 on 81770 degrees of freedom
+Multiple R-squared:  0.3815,	Adjusted R-squared:  0.3815 
+F-statistic: 5.044e+04 on 1 and 81770 DF,  p-value: < 2.2e-16
+
+                 2.5 %     97.5 %
+(Intercept) 533.246667 533.494537
+Comp.3       -9.778174  -9.608979
+
+
+
