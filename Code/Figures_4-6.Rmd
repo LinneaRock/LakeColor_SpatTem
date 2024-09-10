@@ -464,7 +464,6 @@ ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/C
 
 ## MS stats
 ```{r}
-
 require(tidyverse)
 
 lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/2024-08-29_lakecolor_climate_landcover_trends.rds")
@@ -515,21 +514,20 @@ summary_stats <- lake_color_long %>%
 write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/Figure5_summary_stats.csv")
 
 
-
-# # Assuming your dataframe is named lake_color_long, with columns: value, variable, and color_category
-# t_test_results <- lake_color_long %>%
-#   group_by(variable) %>% # Group by variable
-#   summarise(
-#     t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
-#   ) %>%
-#   mutate(
-#     t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
-#     p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
-#     conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
-#     conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
-#   ) %>%
-#   select(-t_test) %>%  # Remove the list column if you just want the summary statistics 
-#         mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
+# checking to make sure all t-tests are significant
+t_test_results <- lake_color_long %>%
+  group_by(variable) %>% # Group by variable
+  summarise(
+    t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
+  ) %>%
+  mutate(
+    t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
+    p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
+    conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
+    conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
+  ) %>%
+  select(-t_test) %>%  # Remove the list column if you just want the summary statistics
+        mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
 ```
 
 
