@@ -3,6 +3,7 @@
 library(tidyverse)
 library(maps)
 library(ggplot2)
+library(sf)
 
 setwd("C:/Users/sadle/OneDrive/Documents/PhD/LakeColor_SpatTem")
 data <-readRDS("2024-08-29_lakecolor_climate_landcover_trends.rds")
@@ -47,6 +48,7 @@ data <- data %>%
 #figure 1 (a)- dwl averaged across all years
 states <- map_data("state")
 
+
 fig1a<-ggplot(data = data) + 
   geom_point(data = data, aes(x = lake_lon_decdeg, y = lake_lat_decdeg), color = data$col_hex, size = .1) +  # Add points
   scale_fill_distiller( palette="Spectral", direction=1)+
@@ -55,6 +57,32 @@ fig1a<-ggplot(data = data) +
   geom_polygon(data= states, aes(x = long, y = lat, group = group), fill="transparent",color = "black", linewidth=0.5)
 
 ggsave("fig1a.png", fig1a, height=4.5, width=6.5, units='in', dpi=1200)
+
+# another option for fig 1 with ecoregions
+# This reads in the shapefiles for ecoregions 
+regions.sf <- read_sf("Data/aggr_ecoregions_2015/Aggr_Ecoregions_2015.shp")|>
+  # fix this dumbass typo
+  mutate(WSA9_NAME = ifelse(WSA9_NAME == "Temporate Plains", "Temperate Plains", WSA9_NAME))
+st_crs(regions.sf)
+regions.sf <- st_transform(regions.sf, crs=4269)
+
+# create sf object from data
+data.sf <- st_as_sf(data,
+                    coords = c('lake_lon_decdeg', 'lake_lat_decdeg'),
+                    crs=4326)
+
+albers_crs <- st_crs(5070)
+# Transform to the Albers Equal Area projection
+data.sf <- st_transform(data.sf, crs = albers_crs)
+
+st_crs(regions.sf) == st_crs(data.sf)
+ggplot() + 
+  geom_sf(data = data.sf, aes(), color = data$col_hex, size = .1) +  # Add points
+  scale_fill_distiller( palette="Spectral", direction=1)+
+  theme_void()+
+  geom_sf(data= regions.sf, aes(), fill="transparent",color = "black", linewidth=0.5)
+
+ggsave('Figures/Figure1/ecoregion_lakes.png',height=4.5, width=6.5, units='in', dpi=1200)
 
 #figure 1 (b)- histogram of dwl
 cols<-as.data.frame(breaks_seq<-seq(470,600,by=5))
