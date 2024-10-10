@@ -33,6 +33,14 @@ R
       strip.text = element_text(size = 13, color = "black"))}
 ```
 
+# Small lakes
+```{r}
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-08-29_lakecolor_climate_landcover_trends.rds") 
+
+nrow(lk[lk$lake_waterarea_ha<10,])/nrow(lk)
+# 0.5281433 ot 52.8% of lakes are small!
+```
+
 
 
 # Figure 4 
@@ -839,7 +847,7 @@ Coefficients:
              Estimate Std. Error t value Pr(>|t|)    
 (Intercept) 533.37060    0.06323  8435.1   <2e-16 ***
 Comp.3       -9.69358    0.04316  -224.6   <2e-16 ***
----
+
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Residual standard error: 18.08 on 81770 degrees of freedom
