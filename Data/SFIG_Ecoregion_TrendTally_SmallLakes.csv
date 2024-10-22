@@ -1,0 +1,72 @@
+"","ecoregion_name","trend_cat_switch","ecoregion_abb","n","percent","mean_slope"
+"1","Coastal Plains","Blue -> Greener","CPL",98,1.15525167983025,0.539337363504105
+"2","Coastal Plains","Green -> Bluer","CPL",1581,18.6372745490982,-0.485429897785506
+"3","Coastal Plains","Intensifying Blue","CPL",475,5.59943416244253,-0.512046719810147
+"4","Coastal Plains","Intensifying Green/brown","CPL",885,10.432629965814,0.401889194707749
+"5","Coastal Plains","No trend - Blue","CPL",1037,12.2244488977956,-0.0158233509366056
+"6","Coastal Plains","No trend - Green/brown","CPL",3745,44.1471177649416,-0.0165415867292893
+"7","Coastal Plains","Shift to blue","CPL",511,6.02381233054344,-0.864035732729012
+"8","Coastal Plains","Shift to green","CPL",151,1.78003064953436,0.783694922942265
+"9","Northern Appalachians","Blue -> Greener","NAP",82,2.40187463386057,0.433890600080473
+"10","Northern Appalachians","Green -> Bluer","NAP",208,6.09256004686585,-0.565338622553822
+"11","Northern Appalachians","Intensifying Blue","NAP",690,20.2108963093146,-0.482153735091934
+"12","Northern Appalachians","Intensifying Green/brown","NAP",112,3.28060925600469,0.459034026254311
+"13","Northern Appalachians","No trend - Blue","NAP",1345,39.3966022261277,-0.0630391248044144
+"14","Northern Appalachians","No trend - Green/brown","NAP",701,20.5330990041008,-0.0565574604773874
+"15","Northern Appalachians","Shift to blue","NAP",233,6.82483889865261,-0.868225883125323
+"16","Northern Appalachians","Shift to green","NAP",43,1.25951962507323,0.772993111239818
+"17","Northern Plains","Green -> Bluer","NPL",482,22.7788279773157,-0.421634776709202
+"18","Northern Plains","Intensifying Blue","NPL",3,0.141776937618147,-0.447030288248441
+"19","Northern Plains","Intensifying Green/brown","NPL",174,8.22306238185255,0.397466888399522
+"20","Northern Plains","No trend - Blue","NPL",19,0.897920604914934,0.0857513430303223
+"21","Northern Plains","No trend - Green/brown","NPL",1415,66.8714555765595,-0.0326197338349057
+"22","Northern Plains","Shift to blue","NPL",17,0.803402646502836,-0.801618809715629
+"23","Northern Plains","Shift to green","NPL",6,0.283553875236295,0.83352542356472
+"24","Southern Appalachians","Blue -> Greener","SAP",46,1.18863049095607,0.461602535167157
+"25","Southern Appalachians","Green -> Bluer","SAP",758,19.5865633074935,-0.486664326515869
+"26","Southern Appalachians","Intensifying Blue","SAP",222,5.73643410852713,-0.499781341661697
+"27","Southern Appalachians","Intensifying Green/brown","SAP",320,8.2687338501292,0.411678512342078
+"28","Southern Appalachians","No trend - Blue","SAP",485,12.5322997416021,-0.033941111086277
+"29","Southern Appalachians","No trend - Green/brown","SAP",1729,44.6770025839793,-0.0416282558812228
+"30","Southern Appalachians","Shift to blue","SAP",263,6.79586563307493,-0.718691491405404
+"31","Southern Appalachians","Shift to green","SAP",47,1.21447028423773,0.595214682794984
+"32","Southern Plains","Blue -> Greener","SPL",6,0.212615166548547,0.362595246435023
+"33","Southern Plains","Green -> Bluer","SPL",963,34.1247342310418,-0.370107881380978
+"34","Southern Plains","Intensifying Blue","SPL",31,1.09851169383416,-0.408569627624881
+"35","Southern Plains","Intensifying Green/brown","SPL",287,10.1700921332388,0.27705783192549
+"36","Southern Plains","No trend - Blue","SPL",48,1.70092133238838,-0.0487311511072855
+"37","Southern Plains","No trend - Green/brown","SPL",1414,50.1063075832743,-0.0309025211490523
+"38","Southern Plains","Shift to blue","SPL",61,2.1615875265769,-0.853098517252289
+"39","Southern Plains","Shift to green","SPL",12,0.425230333097094,0.755956884351942
+"40","Temperate Plains","Blue -> Greener","TPL",36,0.430931290399808,0.443674735731896
+"41","Temperate Plains","Green -> Bluer","TPL",2047,24.503231984678,-0.423463413061746
+"42","Temperate Plains","Intensifying Blue","TPL",435,5.20708642566435,-0.490155024293673
+"43","Temperate Plains","Intensifying Green/brown","TPL",730,8.73832894421834,0.39489281788003
+"44","Temperate Plains","No trend - Blue","TPL",491,5.8774239885085,-0.0318856983100363
+"45","Temperate Plains","No trend - Green/brown","TPL",4008,47.9770169978453,-0.029561164572583
+"46","Temperate Plains","Shift to blue","TPL",520,6.22456308355279,-0.836700525539783
+"47","Temperate Plains","Shift to green","TPL",87,1.04141728513287,0.72250816859825
+"48","Upper Midwest","Blue -> Greener","UMW",141,1.82689816014512,0.469021539353894
+"49","Upper Midwest","Green -> Bluer","UMW",634,8.214563358383,-0.539346993112767
+"50","Upper Midwest","Intensifying Blue","UMW",1494,19.3573464628142,-0.463097295645196
+"51","Upper Midwest","Intensifying Green/brown","UMW",289,3.74449339207048,0.406235053890266
+"52","Upper Midwest","No trend - Blue","UMW",2888,37.4190204716248,-0.0796127211890612
+"53","Upper Midwest","No trend - Green/brown","UMW",1671,21.6506867064006,-0.0562554988289843
+"54","Upper Midwest","Shift to blue","UMW",509,6.59497279087847,-0.80379388435876
+"55","Upper Midwest","Shift to green","UMW",92,1.19201865768334,0.770546141127241
+"56","Western Mountains","Blue -> Greener","WMT",1343,26.7529880478088,0.371645870592874
+"57","Western Mountains","Green -> Bluer","WMT",262,5.2191235059761,-0.493117473917146
+"58","Western Mountains","Intensifying Blue","WMT",355,7.07171314741036,-0.449831151302816
+"59","Western Mountains","Intensifying Green/brown","WMT",245,4.8804780876494,0.397654528662214
+"60","Western Mountains","No trend - Blue","WMT",1625,32.3705179282869,0.0573906909755394
+"61","Western Mountains","No trend - Green/brown","WMT",939,18.7051792828685,-0.0150742101810555
+"62","Western Mountains","Shift to blue","WMT",127,2.52988047808765,-0.820961820769676
+"63","Western Mountains","Shift to green","WMT",124,2.47011952191235,0.654920438155822
+"64","Xeric","Blue -> Greener","XER",11,0.76869322152341,0.527010649868633
+"65","Xeric","Green -> Bluer","XER",481,33.61285814116,-0.433549881533648
+"66","Xeric","Intensifying Blue","XER",77,5.38085255066387,-0.540737239505639
+"67","Xeric","Intensifying Green/brown","XER",130,9.08455625436758,0.378098988701337
+"68","Xeric","No trend - Blue","XER",74,5.17120894479385,-0.0113763962381279
+"69","Xeric","No trend - Green/brown","XER",559,39.0635918937806,-0.0323312153980508
+"70","Xeric","Shift to blue","XER",93,6.49895178197065,-0.902683091657942
+"71","Xeric","Shift to green","XER",6,0.419287211740042,0.998099976380691
