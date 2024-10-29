@@ -33,12 +33,47 @@ R
       strip.text = element_text(size = 13, color = "black"))}
 ```
 
-# Small lakes
+# MS stats
 ```{r}
 lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-08-29_lakecolor_climate_landcover_trends.rds") 
 
+# how many lakes are small
 nrow(lk[lk$lake_waterarea_ha<10,])/nrow(lk)
 # 0.5281433 ot 52.8% of lakes are small!
+
+lk_yrs<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-08-29_lake_color_linear_models.csv")
+# what is the range and average duration of the study period
+year_summary<-lk_yrs %>% group_by(lake_nhdid) %>%
+        summarize(yr_range=max(year)-min(year),
+                  average_duration=n())
+
+table(year_summary$yr_range)
+37+4
+
+#   25    29    30    31    32    33    34    35    36    37 
+#  171    27   337   489   597  1075  2994 11416 11818 52926 
+
+25+4
+
+
+mean(year_summary$average_duration)
+
+as.data.frame(table(lk$trend_cat)/nrow(lk))
+
+# Blue -> Greener	0.05455167			
+# Green -> Bluer	0.18487703			
+# Intensifying Blue	0.10157729			
+# Intensifying Green/brown	0.07098437			
+# No trend - Blue	0.25377219			
+# No trend - Green/brown	0.33423744
+
+lk <- lk %>% 
+  mutate(color_category = case_when(
+    avg_dwl_site > 530 ~ "Green", 
+    avg_dwl_site < 530 ~ "Blue"))
+table(lk$color_category)/nrow(lk)
+#      Blue     Green 
+# 0.4278855 0.5721145 
 ```
 
 
