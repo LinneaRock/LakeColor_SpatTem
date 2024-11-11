@@ -109,7 +109,7 @@ data_tally_ecoreg$trend_cat_switch <- factor(data_tally_ecoreg$trend_cat_switch,
 
 
 # 4. Part a of Figure 2 ####
-p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat_switch, pattern=trend_cat_switch, pattern_color=trend_cat_switch)) +
+ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat_switch, pattern=trend_cat_switch, pattern_color=trend_cat_switch)) +
   geom_bar_pattern(stat = 'identity',position = position_stack(), width = 1, pattern_density=0.005) +
   #facet_grid(~ecoregion_abb) +
   theme_classic() +
@@ -118,22 +118,23 @@ p1 <- ggplot(data_tally_ecoreg, aes(' ', percent, fill = trend_cat_switch, patte
   scale_pattern_manual(values=c('none','stripe','none','none','none','none','stripe', 'none')) +
   scale_pattern_color_manual(values=c('none','#348555ff','none','none','none','none', '#3d7db0ff','none')) +
   facet_grid2(
-    .~ecoregion_abb, 
-    strip = strip_themed(
-      background_x = list(element_rect(color = ecoreg_cols[1], linewidth=2),
-                          element_rect(color = ecoreg_cols[2], linewidth=2),
-                          element_rect(color = ecoreg_cols[3], linewidth=2),
-                          element_rect(color = ecoreg_cols[4], linewidth=2),
-                          element_rect(color = ecoreg_cols[5], linewidth=2),
-                          element_rect(color = ecoreg_cols[6], linewidth=2),
-                          element_rect(color = ecoreg_cols[7], linewidth=2),
-                          element_rect(color = ecoreg_cols[8], linewidth=2),
-                          element_rect(color = ecoreg_cols[9], linewidth=2))
-    )
+    .~ecoregion_abb 
+    # strip = strip_themed(
+    #   background_x = list(element_rect(color = ecoreg_cols[1], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[2], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[3], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[4], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[5], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[6], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[7], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[8], linewidth=2),
+    #                       element_rect(color = ecoreg_cols[9], linewidth=2))
+    # )
   ) +
-  theme(legend.position = 'none')
+  theme(legend.position = 'none',
+        strip.text = element_blank())
 
-p1 
+
 
 ggsave('C:/PhD_code/LakeColor_SpatTem/Figures/Figure2/p1.png',height=4.5, width=6.5, units='in', dpi=1200)
 
