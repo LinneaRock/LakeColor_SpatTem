@@ -254,7 +254,20 @@ cm <- as.data.frame(cm$table) |>
   mutate(prop = Freq/sum(Freq),
          prop = round(prop,2))
 
-
+custom_theme <- function() {
+  theme_bw() +
+    theme(
+      text = element_text(color = "black", size = 13),
+      axis.text = element_text(color = "black",size = 13),
+      axis.title = element_text(color = "black",size = 13),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 13),
+      strip.text = element_text(size = 13, color = "black"))}
+  
 ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
   geom_tile(color="black") +
   scale_x_discrete(expand = c(0, 0))+ #remove white space
@@ -277,7 +290,7 @@ rF_imp<-as.data.frame(importance(rF_color)) %>%
 # update names, fist print as the string that is easy to edit
 rF_imp$variables
 
-rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)","Glaciated", "Lake size (small/large)",  "Connectivity class"  , "Upstream lakes <= 1 ha (ha)" , "Upstream lakes <= 1 ha (no.)"  ,"Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2016-2001 (%)", "Difference in wetland 2016-2001 (%)", "Difference in agriculture 2016-2001 (%)", "Difference in development 2016-2001 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
+rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)","Glaciated", "Lake size (small/large)",  "Connectivity class"  , "Upstream lakes <= 1 ha (ha)" , "Upstream lakes <= 1 ha (no.)"  ,"Average annual air\ntemperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2016-2001 (%)", "Difference in wetland 2016-2001 (%)", "Difference in agriculture 2016-2001 (%)", "Difference in development 2016-2001 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
 
 rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) 
 write.csv(rF_imp, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/Figure4_rF_importance_color.csv")
@@ -304,7 +317,7 @@ ggplot(rF_imp, aes(y = MeanDecreaseGini, x = newvarnames)) +
   ylab("Mean decrease in Gini")
 
 
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_color.png",width=6.7, height=2.2, units="in",dpi = 300)
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_color.png",width=6.7, height=3, units="in",dpi = 300)
 nrow(train)+nrow(validate)
 ```
 total number of lakes:
@@ -402,7 +415,6 @@ validate <- data_subset %>%
 set.seed(111)
 (rF_trend<-randomForest(basic_trend_cat~.,data=train, mtry=6))
 ```
-
 [1] 81849
 [1] 66006
 [1] "min(category_counts$n)"
@@ -414,12 +426,13 @@ Call:
                      Number of trees: 500
 No. of variables tried at each split: 6
 
-        OOB estimate of  error rate: 52.33%
+        OOB estimate of  error rate: 52.86%
 Confusion matrix:
                No trend Trending blue Trending green class.error
-No trend            445           342            289   0.5864312
-Trending blue       294           548            204   0.4760994
-Trending green      294           249            530   0.5060578
+No trend            431           323            322   0.5994424
+Trending blue       291           558            197   0.4665392
+Trending green      315           241            517   0.5181733
+
 
 
 ```{r}
@@ -432,14 +445,14 @@ round((1- rF_trend$err.rate[nrow(rF_trend$err.rate), 4])*100,digits=1)
 
 rm(lake_color);rm(lk)
 ```
-   OOB       No trend  Trending blue Trending green 
-0.5233177      0.5864312      0.4760994      0.5060578 
+           OOB       No trend  Trending blue Trending green 
+     0.5286385      0.5994424      0.4665392      0.5181733 
 No trend 
-    41.4 
+    40.1 
 Trending blue 
-         52.4 
+         53.3 
 Trending green 
-          49.4
+          48.2 
 
 
 
@@ -456,7 +469,19 @@ cm <- as.data.frame(cm$table) |>
   mutate(prop = Freq/sum(Freq),
          prop = round(prop,2))
 
-
+ custom_theme <- function() {
+  theme_bw() +
+    theme(
+      text = element_text(color = "black", size = 13),
+      axis.text = element_text(color = "black",size = 13),
+      axis.title = element_text(color = "black",size = 13),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.subtitle = element_text(hjust = 0.5, size = 12),
+      legend.text = element_text(size = 13),
+      legend.title = element_text(size = 13),
+      strip.text = element_text(size = 13, color = "black"))}
 
 ggplot(cm, aes(x = Observed, y = Predicted, fill=Freq)) +
   geom_tile(color="black") +
@@ -481,7 +506,7 @@ rF_imp<-as.data.frame(importance(rF_trend)) %>%
 
 rF_imp$variables
 
-rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)","Glaciated", "Lake size (small/large)",  "Connectivity class"  , "Upstream lakes <= 1 ha (ha)" , "Upstream lakes <= 1 ha (no.)"  ,"Average temperature (deg C)", "Average precipitation (ppt)", "Slope of temperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2016-2001 (%)", "Difference in wetland 2016-2001 (%)", "Difference in agriculture 2016-2001 (%)", "Difference in development 2016-2001 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
+rF_imp$newvarnames<-c("Ecoregion", "Lake elevation (m)", "Latitude (DD)", "Longitude (DD)", "Lake area (ha)", "Lake perimeter (m)", "Watershed area (ha)","Glaciated", "Lake size (small/large)",  "Connectivity class"  , "Upstream lakes <= 1 ha (ha)" , "Upstream lakes <= 1 ha (no.)"  ,"Average annual air\ntemperature (deg C)", "Average precipitation (ppt)", "Slope of air\ntemperature over time", "Slope of precipitation over time", "Average annual air temperature range (deg C)", "Difference in forest 2016-2001 (%)", "Difference in wetland 2016-2001 (%)", "Difference in agriculture 2016-2001 (%)", "Difference in development 2016-2001 (%)", "Average development (%)", "Average agriculture (%)", "Average forest (%)", "Average wetland (%)", "Average ice and snow (%)", "Average shrub (%)", "Average barren (%)", "Average open water (%)")
 
 rF_imp <- rF_imp %>% arrange(MeanDecreaseGini) %>%  mutate(newvarnames = factor(newvarnames, levels = newvarnames)) 
 write.csv(rF_imp, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/Figure4_rF_importance_trend.csv")
@@ -508,7 +533,7 @@ axis.text = element_text(color = "black", size=15),
         ylim(c(0,150))
 
 
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_trend.png",width=6.9, height=2.2, units="in",dpi = 300)
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure4/Fig4_Importance_rF_trend.png",width=6.9, height=3, units="in",dpi = 300)
 
 nrow(train)+nrow(validate)
 #3996
@@ -558,7 +583,7 @@ new_names <- c(
   "avg_nlcd_forest_pct" = "Average forest (%)",
   "lake_lon_decdeg" = "Longitude (DD)",
   "lake_lat_decdeg" = "Latitude (DD)",
-  "avg_temp_degC" = "Average temperature (deg C)"
+  "avg_temp_degC" = "Average annual air\ntemperature (deg C)"
 )
 
 # Rename the variables using recode
@@ -589,7 +614,7 @@ t_test_results <- lake_color_long %>%
   select(-t_test) %>%  # Remove the list column if you just want the summary statistics
         mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
 
-write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/Figure5_summary_stats_color.csv")
+write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/Figure5_summary_stats_color.csv")
 
 # Create density plots
 plt1<-ggplot(lake_color_long, aes(x = value, fill = color_category)) +
@@ -622,18 +647,19 @@ lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch,-avg_dwl_site, -mean_
 # Log transform lake area and watershed area
 lake_color<- lake_color %>%
         mutate(lake_waterarea_ha=log(lake_waterarea_ha),
-               ws_area_ha=log(ws_area_ha))
+               ws_area_ha=log(ws_area_ha),
+               lake_perimeter_m=log(lake_perimeter_m))
 
 # Reshape data to long format
 lake_color_long <- lake_color %>%
-  pivot_longer(cols = c("lake_lon_decdeg","avg_temp_degC", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha"), 
+  pivot_longer(cols = c("lm_slope_temp",  "lake_perimeter_m", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha"), 
                names_to = "variable", 
                values_to = "value")
 
 # Create a named vector for renaming the variables
 new_names <- c(
-  "lake_lon_decdeg" = "Longitude (DD)",
-  "avg_temp_degC" = "Average temperature (deg C)",
+  "lake_perimeter_m" = "log(Lake perimeter (m))",
+  "lm_slope_temp" = "Sloe of average air\ntemperature (deg C)",
   "ws_area_ha" = "log(Watershed area (ha))",
   "lake_elevation_m" = "Lake elevation (m)",
   "lake_waterarea_ha" = "log(Lake area (ha))"
@@ -652,7 +678,7 @@ summary_stats <- lake_color_long %>%
     sd_value = round(sd(value, na.rm = TRUE), digits=2)          
   )
 
-write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Code/Data_Figures_4-6/Figure5_summary_stats_trend.csv")
+write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/Figure5_summary_stats_trend.csv")
 
   custom_theme <- function() {
  theme_classic() +
@@ -680,11 +706,11 @@ custom_theme() +
   theme(legend.position = "top") 
         
 (plt1 / plt2)+
-  plot_layout( height= c(2,3.5)) + 
+  plot_layout( height= c(2,3.3)) + 
   plot_annotation(tag_levels = 'a')
 
 
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure5_Density_plots_important_vars.png",width=7, height=10, units="in",dpi = 200)
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure5_Density_plots_important_vars.png",width=7, height=11, units="in",dpi = 200)
 ```
 
 
@@ -868,65 +894,6 @@ pc.scores<-pc.scores %>%
                                     avg_dwl_site >=bg.fui[21,1] & avg_dwl_site <=bg.fui[21,2] ~bg.fui[21,3] , T~"black"))
 
 
-# # rename variable labels
-# 
-# 
-# rownames(pc$loadings) <- c(
-#         "Elevation (m)",
-#         "Latitude",
-#         "Longitutde",
-#         "Lake area (ha)",
-#         "Lake perimeter (m)",
-#         "W.S. area (ha)",
-#         "Temp (C)",
-#         "Precip (ppt)",
-#         "Temp slope",
-#         "Precip slope",
-#         "Range temp (C)",
-#         "Forest diff",
-#         "Wetland diff",
-#         "Ag diff",
-#         "Dev diff",
-#         "Dev (%)",
-#         "Ag (%)",
-#         "Forest (%)",
-#         "Wetland (%)",
-#         "Icesnow (%)",
-#         "Shrub (%)",
-#         "Barren (%)",
-#         "Openwater (%)"
-# )
-# 
-# 
-# 
-# 
-# i=1
-# for(i in 1:8){
-# load <- pc$loadings[, c(i,i+1)]
-# load <- load[abs(load[,1])>0.3 | abs(load[,2])>0.3, ]
-# 
-# png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/PCA/",Sys.Date(),"_PC",i,"_PC",i+1,"_SepScale.png"), width = 8, height=6, units = "in", res=400)
-# par(mar=c(5,5,1,1), xpd=T)
-# plot(pc.scores[,i+1], pc.scores[,i+2], pch = 19, col = pc.scores$col_hex, xlab=paste0("PC",i),ylab=paste0("PC",i+1))
-# 
-# # scaling factor for arrow length
-# scaling_factor <- c(11,10,10,10,10,10,10,10)[i]
-# 
-# 
-# # Add arrows for loadings of PC1 and PC2
-# arrows(0, 0, load[, 1] * scaling_factor, load[, 2] * scaling_factor, 
-#        angle = 20, length = 0.1, col = "black")
-# 
-# 
-# text(load[, 1] * scaling_factor, load[, 2] * scaling_factor,
-#      labels = rownames(load), pos = 3, col = "black", cex = 1.1)
-# dev.off()
-# }
-# 
-# rm(load)
-# rm(scaling_factor)
-# rm(bg.fui)
-# rm(i)
 ```
 
 

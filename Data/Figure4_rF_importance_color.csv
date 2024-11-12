@@ -24,7 +24,8 @@
 "23","avg_ppt",1446.02326173318,"Average precipitation (ppt)"
 "24","avg_nlcd_shrub52_pct",1795.48592959344,"Average shrub (%)"
 "25","lake_lat_decdeg",1804.2964485606,"Latitude (DD)"
-"26","avg_temp_degC",1807.43511710199,"Average temperature (deg C)"
+"26","avg_temp_degC",1807.43511710199,"Average annual air
+temperature (deg C)"
 "27","lake_lon_decdeg",2175.27774819405,"Longitude (DD)"
 "28","avg_nlcd_forest_pct",2709.8390573262,"Average forest (%)"
 "29","epanutr_zoneid",3845.64269979374,"Ecoregion"

@@ -1,16 +1,19 @@
 "","variable","basic_trend_cat","mean_value","sd_value"
-"1","Average temperature (deg C)","No trend",9.69,5.57
-"2","Average temperature (deg C)","Trending blue",10.53,5.14
-"3","Average temperature (deg C)","Trending green",10.23,7.03
-"4","Lake elevation (m)","No trend",474.83,597.7
-"5","Lake elevation (m)","Trending blue",352.09,386.92
-"6","Lake elevation (m)","Trending green",778.36,1032.49
-"7","Longitude (DD)","No trend",-91.5,12.14
-"8","Longitude (DD)","Trending blue",-91.8,12.06
-"9","Longitude (DD)","Trending green",-94.28,13.1
-"10","log(Lake area (ha))","No trend",2.6,1.41
-"11","log(Lake area (ha))","Trending blue",2.23,1.12
-"12","log(Lake area (ha))","Trending green",2.57,1.47
+"1","Lake elevation (m)","No trend",474.83,597.7
+"2","Lake elevation (m)","Trending blue",352.09,386.92
+"3","Lake elevation (m)","Trending green",778.36,1032.49
+"4","Sloe of average air
+temperature (deg C)","No trend",-0.61,0.7
+"5","Sloe of average air
+temperature (deg C)","Trending blue",-0.6,0.69
+"6","Sloe of average air
+temperature (deg C)","Trending green",-0.33,0.76
+"7","log(Lake area (ha))","No trend",2.6,1.41
+"8","log(Lake area (ha))","Trending blue",2.23,1.12
+"9","log(Lake area (ha))","Trending green",2.57,1.47
+"10","log(Lake perimeter (m))","No trend",7.64,0.96
+"11","log(Lake perimeter (m))","Trending blue",7.39,0.76
+"12","log(Lake perimeter (m))","Trending green",7.6,0.99
 "13","log(Watershed area (ha))","No trend",5.22,2.08
 "14","log(Watershed area (ha))","Trending blue",4.63,1.98
 "15","log(Watershed area (ha))","Trending green",5.03,2.15
