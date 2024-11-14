@@ -152,7 +152,7 @@ date
 ```
 
 
-## 1a. Removing lakes that have dominant wavelengths outside of 470-590 for >5 observations. 28 lakes were removed from the analyses.
+## 1a. Removing lakes that have dominant wavelengths outside of 470-590 for >5 observations. 25 lakes were removed from the analyses.
 ```{r}
 require(tidyverse)
 temporal<-read.csv("/project/lakecolor/data/02_Color_Climate_Landcover_Trends/2024-08-02_lake_color_linear_models.csv", header=T,row.names=1)
