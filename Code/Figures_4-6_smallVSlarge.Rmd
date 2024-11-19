@@ -6,12 +6,12 @@ output: html_document
 ---
 
 ```{bash}
-ssh jvonegge@beartooth.arcc.uwyo.edu
-cd /project/lakecolor/data/
+ssh jvonegge@medicinebow.arcc.uwyo.edu
+cd /project/lakecolor/data/03_Add_More_LAGOS/
 
-salloc --mem=110GB --nodes=1 --cpus-per-task=8 --account=lakecolor --time=3:00:00
+salloc --mem=110GB --nodes=1 --cpus-per-task=1 --account=microbiome --time=3:00:00
 
-module load arcc/1.0  gcc/12.2.0 
+module load arcc/1.0  gcc/14.2.0 
 module load r/4.4.0
 R
 ```
@@ -75,6 +75,7 @@ observation-level flags for freshwater connectivity.
 Finally, we include a variable that indicates whether or not any part of the focal lake was
 glaciated during the Late Wisconsin glaciation period. There are no observation-level flags for
 glaciation status."
+
 
 
 # MS stats
