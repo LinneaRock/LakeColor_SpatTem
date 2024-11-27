@@ -1841,20 +1841,20 @@ lake_color <- lk %>% select(-c(trend_cat, trend_cat_switch, lm_slope_color, lm_p
   select(-avg_dwl_site, -mean_range_dwl_site)
 
 lake_color<- lake_color %>%
-        mutate(lake_waterarea_ha=log(gr),
+        mutate(lake_waterarea_ha=log(lake_waterarea_ha),
                ws_area_ha=log(ws_area_ha),
                lake_perimeter_m=log(lake_perimeter_m))
 
 # Reshape data to long format
 lake_color_long <- lake_color %>%
-  pivot_longer(cols = c("soil_orgcarbon_gperkg", "soil_clay_pct", "groundwaterrecharge_mmperyr", "soil_silt_pct"), 
+  pivot_longer(cols = c("soil_orgcarbon_gperkg", "soil_clay_pct", "groundwaterrecharge_mmperyr", "soil_sand_pct"), 
                names_to = "variable", 
                values_to = "value")
 
 # Create a named vector for renaming the variables
 new_names <- c(
   "soil_orgcarbon_gperkg"= "Soil organic carbon (g/kg)",
-  "soil_silt_pct" = "Soil silt (%)",
+  "soil_sand_pct" = "Soil sand (%)",
   "soil_clay_pct" = "Soil clay (%)",
   "groundwaterrecharge_mmperyr"= "Groundwater recharge (mm/yr)"
 )
@@ -1872,23 +1872,6 @@ summary_stats <- lake_color_long %>%
   )
 
 
-# # checking to make sure all t-tests are significant
-# t_test_results <- lake_color_long %>%
-#   group_by(variable) %>% # Group by variable
-#   summarise(
-#     t_test = list(t.test(value ~ color_category, data = pick(value, color_category))) # Specify columns in pick()
-#   ) %>%
-#   mutate(
-#     t_statistic = sapply(t_test, function(x) x$statistic),   # Extract t-statistic
-#     p_value = sapply(t_test, function(x) x$p.value),         # Extract p-value
-#     conf_low = sapply(t_test, function(x) x$conf.int[1]),    # Extract confidence interval lower bound
-#     conf_high = sapply(t_test, function(x) x$conf.int[2])    # Extract confidence interval upper bound
-#   ) %>%
-#   select(-t_test) %>%  # Remove the list column if you just want the summary statistics
-#         mutate(pval_lessthan0.5=ifelse(p_value<0.05, "Yes","No"))
-# 
-# 
-
 # Non-parametric test
 wilcox_test_results <- lake_color_long %>%
   group_by(variable) %>% # Group by variable
@@ -1905,7 +1888,7 @@ wilcox_test_results <- lake_color_long %>%
 
 write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Data/Figure5_summary_stats_color.csv")
 
-lake_color_long$variable<-factor(lake_color_long$variable, levels=c("Soil organic carbon (g/kg)","Soil clay (%)","Groundwater recharge (mm/yr)", "Soil silt (%)"))
+lake_color_long$variable<-factor(lake_color_long$variable, levels=c("Soil organic carbon (g/kg)","Soil clay (%)","Groundwater recharge (mm/yr)", "Soil sand (%)"))
 
 
 # Create density plots
@@ -1944,14 +1927,14 @@ lake_color<- lake_color %>%
 
 # Reshape data to long format
 lake_color_long <- lake_color %>%
-  pivot_longer(cols = c("lm_slope_temp",  "lake_perimeter_m", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha"), 
+  pivot_longer(cols = c("lake_perimeter_m", "ws_area_ha", "lake_elevation_m", "lake_waterarea_ha", "lake_lat_decdeg"), 
                names_to = "variable", 
                values_to = "value")
 
 # Create a named vector for renaming the variables
 new_names <- c(
   "lake_perimeter_m" = "log(Lake perimeter (m))",
-  "lm_slope_temp" = "Sloe of average air\ntemperature (deg C)",
+  "lake_lat_decdeg" = "Latitude (DD)",
   "ws_area_ha" = "log(Watershed area (ha))",
   "lake_elevation_m" = "Lake elevation (m)",
   "lake_waterarea_ha" = "log(Lake area (ha))"
@@ -1986,7 +1969,8 @@ write.csv(summary_stats, "/Users/jordanscheibe/Library/CloudStorage/OneDrive-Uni
       legend.title = element_text(size = 13),
       strip.text = element_text(size = 13, color = "black"))}
   
-lake_color_long$variable<-factor(lake_color_long$variable, levels=c("Lake elevation (m)","log(Lake perimeter (m))","log(Lake area (ha))","Sloe of average air\ntemperature (deg C)","log(Watershed area (ha))"))
+lake_color_long$variable<-factor(lake_color_long$variable, levels=c("Lake elevation (m)","log(Lake area (ha))",
+"log(Watershed area (ha))","log(Lake perimeter (m))","Latitude (DD)"))
 
 # Create density plots
 plt2<-ggplot(lake_color_long, aes(x = value, fill = basic_trend_cat)) +
@@ -2004,7 +1988,7 @@ custom_theme() +
   plot_annotation(tag_levels = 'a')
 
 
-ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure5_Density_plots_important_vars_newvars.png",width=7, height=11, units="in",dpi = 200)
+ggsave("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure5/Figure5_Density_plots_important_vars.png",width=7, height=11, units="in",dpi = 200)
 ```
 
 
@@ -2118,7 +2102,11 @@ rm(list=ls()[! ls() %in% c("Y", "X")])
 
 pc <- princomp(X, cor=T)
 ```
-
+[1] 81849
+[1] 81849    58
+[1] 81740    57
+[1] 81739     5
+[1] 81739    57
 
 ```{r}
 (spc <- summary(pc, loadings=T, cutoff=0.3))
@@ -2134,9 +2122,40 @@ print(pc$loadings[which(abs(pc$loadings[,i])>0.25),i])
 }
 ```
 
+[1] "Principal component 1"
+mean_totaldepnitrogen_kgperha   mean_totaldepsulfur_kgperha 
+                   -0.2640571                    -0.2738698 
+[1] "Principal component 2"
+        avg_nlcd_forest_pct groundwaterrecharge_mmperyr              runoff_inperyr               soil_clay_pct 
+                  0.2684642                   0.3138799                   0.2985303                  -0.2638211 
+      soil_orgcarbon_gperkg 
+                  0.2889508 
+[1] "Principal component 3"
+avg_nlcd_wetland_pct          soil_kffact        soil_sand_pct        soil_silt_pct   topographicwetness 
+          -0.2777025            0.3431388           -0.3078798            0.3155079           -0.3006215 
+[1] "Principal component 4"
+[1] 0.2656759
+[1] "Principal component 5"
+    lake_lat_decdeg       avg_temp_degC    avg_nlcd_dev_pct satoverlandflow_pct        roads_mperha 
+          0.2948483          -0.2768760           0.2724737          -0.2802724           0.2729229 
+[1] "Principal component 6"
+        lake_waterarea_ha          lake_perimeter_m                ws_area_ha lake_lakes1ha_upstream_ha 
+                0.3658960                 0.4044682                 0.3712166                 0.3975824 
+ lake_lakes1ha_upstream_n 
+                0.4646848 
+[1] "Principal component 7"
+              lm_slope_ppt avg_annual_range_temp_degC              dams_npersqkm 
+                -0.3414416                 -0.2516631                 -0.2579439 
+[1] "Principal component 8"
+       lm_slope_temp nlcd_summed_agr_diff      avg_nlcd_ag_pct avg_nlcd_shrub52_pct        canals_mperha 
+           0.2632541            0.4932867           -0.4300722            0.2537919            0.3044692 
+[1] "Principal component 9"
+      nlcd_summed_agr_diff       avg_nlcd_shrub52_pct   avg_nlcd_openwater11_pct lith_noncarbonateresid_pct 
+                -0.2776792                  0.2799591                 -0.2505726                 -0.2646158 
+               reliefratio 
+                 0.3366986 
 
-
-PCAs overlaid with PCs
+Add lake color to PC scores
 ```{r}
 require(scales)
 require(tidyverse)
@@ -2192,16 +2211,19 @@ Correlation between lake color and PCs
 ```{r}
 lake_color<- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:57)))
 (round(RY<-cor(lake_color)[,1][2:10],digits=2))
-abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 # only principle component 3 greater than 0.3
-table(abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 )
+abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 # only principle component 3 greater than 0.3
+table(abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 )
 
 ```
-NEW!
+Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 Comp.9 
+ -0.14  -0.61   0.27   0.16  -0.13  -0.07   0.06   0.11  -0.02 
+
+FALSE  TRUE 
+   52     1 
+
 [1] "Principal component 2"
-        avg_nlcd_forest_pct groundwaterrecharge_mmperyr 
-                  0.2684642                   0.3138799 
-             runoff_inperyr               soil_clay_pct 
-                  0.2985303                  -0.2638211 
+        avg_nlcd_forest_pct groundwaterrecharge_mmperyr              runoff_inperyr               soil_clay_pct 
+                  0.2684642                   0.3138799                   0.2985303                  -0.2638211 
       soil_orgcarbon_gperkg 
                   0.2889508 
 
@@ -2227,21 +2249,21 @@ summary_fit<-summary(mlm)
 r_squared <- summary_fit$r.squared
 p_value <- summary_fit$coefficients[, 4]
 
-png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PC2_geovars.png"), width = 7, height=5, units = "in", res=400)
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PCA.png"), width = 7, height=5, units = "in", res=400)
 par(mar=c(3,3,1,1))
-plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex, xlim=c(-9,8))
+plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex)
 # add equation
-text(-9, 495, 
+text(16, (max(lake_color$avg_dwl_site)-2), 
      labels = bquote(y == .(round(summary_fit$coefficients[1,1], 2)) - .(round(abs(summary_fit$coefficients[2,1]), 2)) * x), 
-      col = "black", cex = 1.2, adj=0)
+      col = "black", cex = 1.2, adj=1)
 # Add R-squared and p-value text
-text(-9, 485, 
+text(16, (max(lake_color$avg_dwl_site)-9), 
      labels = bquote(R^2 == .(round(r_squared, 2))), 
-        col = "black", cex = 1.2, adj=0)
+        col = "black", cex = 1.2, adj=1)
 
-text(-9, 475, 
+text(16 , (max(lake_color$avg_dwl_site)-18), 
      labels = bquote(italic(P) == .(format.pval(p_value, digits = 2))), 
-     col = "black", cex = 1.2, adj=0)
+     col = "black", cex = 1.2, adj=1)
 
 abline(lm(avg_dwl_site ~  Comp.2, data=lake_color),lwd=2)
 dev.off()
@@ -2252,7 +2274,27 @@ dev.off()
 summary_fit
 confint(mlm, level = 0.95)
 ```
+Call:
+lm(formula = avg_dwl_site ~ Comp.2, data = lake_color)
 
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-60.830 -13.586   0.273  13.430  80.919 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 533.36932    0.06355  8392.3   <2e-16 ***
+Comp.2       -5.28930    0.02386  -221.7   <2e-16 ***
+
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 18.17 on 81737 degrees of freedom
+Multiple R-squared:  0.3755,	Adjusted R-squared:  0.3755 
+F-statistic: 4.914e+04 on 1 and 81737 DF,  p-value: < 2.2e-16
+
+                 2.5 %     97.5 %
+(Intercept) 533.244748 533.493882
+Comp.2       -5.336069  -5.242536
 
 
 ### small
@@ -2306,7 +2348,8 @@ X <- lk %>% filter(lake_waterarea_ha < 10) %>%
                 soil_depthtobedrock_cm,
                 soil_kffact,
                 soil_orgcarbon_gperkg,
-                soil_sand_pct,soil_silt_pct,
+                soil_sand_pct,
+                soil_silt_pct,
                 lith_carbonateresid_pct,
                 lith_noncarbonateresid_pct,
                 lith_silicicresid_pct,
@@ -2361,7 +2404,7 @@ rm(list=ls()[! ls() %in% c("Y", "X")])
 
 pc <- princomp(X, cor=T)
 ```
-43174    57
+[1] 43174    57
 
 ```{r}
 (spc <- summary(pc, loadings=T, cutoff=0.3))
@@ -2376,14 +2419,12 @@ print(paste0("Principal component ",i))
 print(pc$loadings[which(abs(pc$loadings[,i])>0.25),i])
 }
 ```
-[1] "Principal component 1"
+] "Principal component 1"
              lake_elevation_m mean_totaldepnitrogen_kgperha 
                     0.2648562                    -0.2674495 
 [1] "Principal component 2"
-                    avg_ppt groundwaterrecharge_mmperyr              runoff_inperyr 
-                  0.2552809                   0.2896867                   0.2947689 
-              soil_clay_pct       soil_orgcarbon_gperkg 
-                 -0.2628248                   0.2674841 
+                    avg_ppt groundwaterrecharge_mmperyr              runoff_inperyr               soil_clay_pct       soil_orgcarbon_gperkg 
+                  0.2552809                   0.2896867                   0.2947689                  -0.2628248                   0.2674841 
 [1] "Principal component 3"
 avg_nlcd_wetland_pct          soil_kffact        soil_sand_pct        soil_silt_pct   topographicwetness 
           -0.2617541            0.3287885           -0.3032925            0.3242227           -0.3016618 
@@ -2394,10 +2435,8 @@ avg_nlcd_wetland_pct          soil_kffact        soil_sand_pct        soil_silt_
     lake_lat_decdeg       avg_temp_degC satoverlandflow_pct 
           0.3272936          -0.3011937          -0.2985980 
 [1] "Principal component 6"
-        lake_waterarea_ha          lake_perimeter_m                ws_area_ha lake_lakes1ha_upstream_ha 
-               -0.3387945                -0.3663161                -0.2919574                -0.4155724 
- lake_lakes1ha_upstream_n 
-               -0.4721371 
+        lake_waterarea_ha          lake_perimeter_m                ws_area_ha lake_lakes1ha_upstream_ha  lake_lakes1ha_upstream_n 
+               -0.3387945                -0.3663161                -0.2919574                -0.4155724                -0.4721371 
 [1] "Principal component 7"
                ws_area_ha lake_lakes1ha_upstream_ha  lake_lakes1ha_upstream_n 
                 0.2811422                 0.4133479                 0.4570029 
@@ -2406,10 +2445,9 @@ lake_waterarea_ha  lake_perimeter_m
        -0.5078104        -0.5132229 
 [1] "Principal component 9"
        lm_slope_temp nlcd_summed_agr_diff      avg_nlcd_ag_pct avg_nlcd_shrub52_pct        canals_mperha 
-           0.2878618            0.4341670           -0.3898569            0.2971308            0.3379735 
+           0.2878618            0.4341670           -0.3898569            0.2971308            0.3379735
 
-
-PCAs overlaid with PCs
+Add lake color to PC scores
 ```{r}
 require(scales)
 require(tidyverse)
@@ -2465,16 +2503,19 @@ Correlation between lake color and PCs
 ```{r}
 lake_color<- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:57)))
 (round(RY<-cor(lake_color)[,1][2:10],digits=2))
-abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 # only principle component 3 greater than 0.3
-table(abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 )
+#abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 # only principle component 3 greater than 0.3
+table(abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 )
 
 ```
-NEW!
+Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 Comp.9 
+ -0.27  -0.54   0.22   0.19  -0.17   0.03   0.03  -0.01   0.11 
+
+FALSE  TRUE 
+   56     1
+
 [1] "Principal component 2"
-                    avg_ppt groundwaterrecharge_mmperyr              runoff_inperyr 
-                  0.2552809                   0.2896867                   0.2947689 
-              soil_clay_pct       soil_orgcarbon_gperkg 
-                 -0.2628248                   0.2674841 
+                    avg_ppt groundwaterrecharge_mmperyr              runoff_inperyr               soil_clay_pct       soil_orgcarbon_gperkg 
+                  0.2552809                   0.2896867                   0.2947689                  -0.2628248                   0.2674841 
 
 Multiple linear regression using a all PCs and combinations of PCs
 ```{r}
@@ -2498,21 +2539,21 @@ summary_fit<-summary(mlm)
 r_squared <- summary_fit$r.squared
 p_value <- summary_fit$coefficients[, 4]
 
-png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PC2_geovars_small.png"), width = 7, height=5, units = "in", res=400)
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Supplementary Figures/PCA_small_large/",Sys.Date(),"_Fig_6_lakecolor_vs_PCA_small.png"), width = 7, height=5, units = "in", res=400)
 par(mar=c(3,3,1,1))
-plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex, xlim=c(-9,8))
+plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex)
 # add equation
-text(-9, 495, 
+text(14, (max(lake_color$avg_dwl_site)-2), 
      labels = bquote(y == .(round(summary_fit$coefficients[1,1], 2)) - .(round(abs(summary_fit$coefficients[2,1]), 2)) * x), 
-      col = "black", cex = 1.2, adj=0)
+      col = "black", cex = 1.2, adj=1)
 # Add R-squared and p-value text
-text(-9, 485, 
+text(14, (max(lake_color$avg_dwl_site)-9), 
      labels = bquote(R^2 == .(round(r_squared, 2))), 
-        col = "black", cex = 1.2, adj=0)
+        col = "black", cex = 1.2, adj=1)
 
-text(-9, 475, 
+text(14, (max(lake_color$avg_dwl_site)-18), 
      labels = bquote(italic(P) == .(format.pval(p_value, digits = 2))), 
-     col = "black", cex = 1.2, adj=0)
+     col = "black", cex = 1.2, adj=1)
 
 abline(lm(avg_dwl_site ~  Comp.2, data=lake_color),lwd=2)
 dev.off()
@@ -2625,7 +2666,7 @@ rm(list=ls()[! ls() %in% c("Y", "X")])
 
 pc <- princomp(X, cor=T)
 ```
-38565    57
+[1] 38565    57
 
 ```{r}
 (spc <- summary(pc, loadings=T, cutoff=0.3))
@@ -2640,16 +2681,12 @@ print(paste0("Principal component ",i))
 print(pc$loadings[which(abs(pc$loadings[,i])>0.25),i])
 }
 ```
-[1] "Principal component 1"
-                    avg_ppt mean_totaldepsulfur_kgperha       lm_slope_n_deposition 
-                 -0.2728518                  -0.2796289                   0.2826333 
-      lm_slope_s_deposition 
-                  0.2645140 
+1] "Principal component 1"
+                    avg_ppt mean_totaldepsulfur_kgperha       lm_slope_n_deposition       lm_slope_s_deposition 
+                 -0.2728518                  -0.2796289                   0.2826333                   0.2645140 
 [1] "Principal component 2"
-        avg_nlcd_forest_pct groundwaterrecharge_mmperyr             soil_coarse_pct 
-                  0.2762545                   0.2891140                   0.3152736 
-      soil_orgcarbon_gperkg                       tri_m 
-                  0.2643489                   0.2712627 
+        avg_nlcd_forest_pct groundwaterrecharge_mmperyr             soil_coarse_pct       soil_orgcarbon_gperkg                       tri_m 
+                  0.2762545                   0.2891140                   0.3152736                   0.2643489                   0.2712627 
 [1] "Principal component 3"
 avg_nlcd_wetland_pct          soil_kffact        soil_sand_pct        soil_silt_pct   topographicwetness 
           -0.2834991            0.3581020           -0.3131859            0.3060463           -0.2802198 
@@ -2660,23 +2697,19 @@ avg_nlcd_wetland_pct          soil_kffact        soil_sand_pct        soil_silt_
 lake_perimeter_m avg_nlcd_dev_pct     roads_mperha 
       -0.2587762        0.2768997        0.2834230 
 [1] "Principal component 6"
-        lake_waterarea_ha          lake_perimeter_m                ws_area_ha lake_lakes1ha_upstream_ha 
-                0.3120226                 0.3314295                 0.3020226                 0.3471272 
- lake_lakes1ha_upstream_n 
-                0.3855620 
+        lake_waterarea_ha          lake_perimeter_m                ws_area_ha lake_lakes1ha_upstream_ha  lake_lakes1ha_upstream_n 
+                0.3120226                 0.3314295                 0.3020226                 0.3471272                 0.3855620 
 [1] "Principal component 7"
 [1] -0.3235967
 [1] "Principal component 8"
 nlcd_summed_agr_diff      avg_nlcd_ag_pct 
            0.5834398           -0.4987825 
 [1] "Principal component 9"
-      avg_nlcd_shrub52_pct lith_noncarbonateresid_pct      lith_silicicresid_pct              canals_mperha 
-                 0.3644969                 -0.2717177                  0.2684283                  0.3067092 
-               reliefratio 
-                 0.2921993 
+      avg_nlcd_shrub52_pct lith_noncarbonateresid_pct      lith_silicicresid_pct              canals_mperha                reliefratio 
+                 0.3644969                 -0.2717177                  0.2684283                  0.3067092                  0.2921993
 
 
-PCAs overlaid with PCs
+Add lake color to PC scores
 ```{r}
 require(scales)
 require(tidyverse)
@@ -2732,11 +2765,20 @@ Correlation between lake color and PCs
 ```{r}
 lake_color<- pc.scores %>% select(avg_dwl_site, paste0("Comp.",seq(1:57)))
 (round(RY<-cor(lake_color)[,1][2:10],digits=2))
-abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 # only principle component 3 greater than 0.3
-table(abs((round(RY<-cor(lake_color)[,1][2:54],digits=2))) > 0.3 )
+#abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 # only principle component 3 greater than 0.3
+table(abs((round(RY<-cor(lake_color)[,1][2:58],digits=2))) > 0.3 )
 
 ```
-NEW!
+
+Comp.1 Comp.2 Comp.3 Comp.4 Comp.5 Comp.6 Comp.7 Comp.8 Comp.9 
+  0.20  -0.64   0.28   0.10  -0.09  -0.10   0.07   0.11   0.02 
+
+FALSE  TRUE 
+   56     1
+   
+[1] "Principal component 2"
+        avg_nlcd_forest_pct groundwaterrecharge_mmperyr             soil_coarse_pct       soil_orgcarbon_gperkg                       tri_m 
+                  0.2762545                   0.2891140                   0.3152736                   0.2643489                   0.2712627 
 
 
 Multiple linear regression using a all PCs and combinations of PCs
@@ -2761,21 +2803,21 @@ summary_fit<-summary(mlm)
 r_squared <- summary_fit$r.squared
 p_value <- summary_fit$coefficients[, 4]
 
-png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Figure6/",Sys.Date(),"_Fig_6_lakecolor_vs_PC2_geovars_large.png"), width = 7, height=5, units = "in", res=400)
+png(paste0("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/LakeColor_SpatTem/Figures/Supplementary Figures/PCA_small_large/",Sys.Date(),"_Fig_6_lakecolor_vs_PCA_large.png"), width = 7, height=5, units = "in", res=400)
 par(mar=c(3,3,1,1))
-plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex, xlim=c(-9,8))
+plot(lake_color$Comp.2,lake_color$avg_dwl_site, ylab = "", xlab= "",pch=16, col = lake_color$col_hex)
 # add equation
-text(-9, 495, 
+text(15, (max(lake_color$avg_dwl_site)-2), 
      labels = bquote(y == .(round(summary_fit$coefficients[1,1], 2)) - .(round(abs(summary_fit$coefficients[2,1]), 2)) * x), 
-      col = "black", cex = 1.2, adj=0)
+      col = "black", cex = 1.2, adj=1)
 # Add R-squared and p-value text
-text(-9, 485, 
+text(15, (max(lake_color$avg_dwl_site)-9), 
      labels = bquote(R^2 == .(round(r_squared, 2))), 
-        col = "black", cex = 1.2, adj=0)
+        col = "black", cex = 1.2, adj=1)
 
-text(-9, 475, 
+text(15, (max(lake_color$avg_dwl_site)-18), 
      labels = bquote(italic(P) == .(format.pval(p_value, digits = 2))), 
-     col = "black", cex = 1.2, adj=0)
+     col = "black", cex = 1.2, adj=1)
 
 abline(lm(avg_dwl_site ~  Comp.2, data=lake_color),lwd=2)
 dev.off()
