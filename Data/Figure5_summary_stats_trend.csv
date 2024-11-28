@@ -1,16 +1,16 @@
 "","variable","basic_trend_cat","mean_value","sd_value"
-"1","Lake elevation (m)","No trend",474.83,597.7
-"2","Lake elevation (m)","Trending blue",352.09,386.92
-"3","Lake elevation (m)","Trending green",778.36,1032.49
-"4","Latitude (DD)","No trend",41.27,5.59
-"5","Latitude (DD)","Trending blue",41.01,5.41
-"6","Latitude (DD)","Trending green",39.45,6.28
-"7","log(Lake area (ha))","No trend",2.6,1.41
-"8","log(Lake area (ha))","Trending blue",2.23,1.12
-"9","log(Lake area (ha))","Trending green",2.57,1.47
-"10","log(Lake perimeter (m))","No trend",7.64,0.96
-"11","log(Lake perimeter (m))","Trending blue",7.39,0.76
-"12","log(Lake perimeter (m))","Trending green",7.6,0.99
-"13","log(Watershed area (ha))","No trend",5.22,2.08
-"14","log(Watershed area (ha))","Trending blue",4.63,1.98
-"15","log(Watershed area (ha))","Trending green",5.03,2.15
+"1","Lake area (ha)","No trend",103.93,1376.42
+"2","Lake area (ha)","Trending blue",45.93,944.11
+"3","Lake area (ha)","Trending green",252.99,5866.73
+"4","Lake elevation (m)","No trend",474.83,597.7
+"5","Lake elevation (m)","Trending blue",352.09,386.92
+"6","Lake elevation (m)","Trending green",778.36,1032.49
+"7","Lake perimeter (m)","No trend",5020.19,31033.48
+"8","Lake perimeter (m)","Trending blue",2764.33,13055.14
+"9","Lake perimeter (m)","Trending green",5401.17,28787.76
+"10","Latitude (DD)","No trend",41.27,5.59
+"11","Latitude (DD)","Trending blue",41.01,5.41
+"12","Latitude (DD)","Trending green",39.45,6.28
+"13","Watershed area (ha)","No trend",6282.56,83527.13
+"14","Watershed area (ha)","Trending blue",4783.37,91295.88
+"15","Watershed area (ha)","Trending green",7736.79,92707.82
