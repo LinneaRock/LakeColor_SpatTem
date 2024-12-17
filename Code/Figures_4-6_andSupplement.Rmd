@@ -317,11 +317,17 @@ write_rds(lk,"/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyo
 
 # MS stats
 ```{r}
-lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-08-29_lakecolor_climate_landcover_trends.rds") 
+lk<-readRDS("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-11-19_lakecolor_climate_landcover_trends_update_2.rds") 
 
 # how many lakes are small
 nrow(lk[lk$lake_waterarea_ha<10,])/nrow(lk)
 # 0.5281433 ot 52.8% of lakes are small!
+
+nrow(lk[lk$lake_waterarea_ha<10,])
+# small 43228
+
+nrow(lk[lk$lake_waterarea_ha>10,])
+# large 38621
 
 lk_yrs<-read.csv("/Users/jordanscheibe/Library/CloudStorage/OneDrive-UniversityofWyoming/Collaborations/LakeColor/2024-08-29_lake_color_linear_models.csv")
 # what is the range and average duration of the study period
