@@ -59,13 +59,17 @@ ecoreg_cols <- c(
 
 
 # re-org these for easier to read legend/figure
-trend_cols <- c("blue1",       # Intensifying Blue,
+trend_cols <- c(# negative slopes 
+                "blue1",       # Intensifying Blue,
                 "skyblue2",    # Lake became blue -- add green stripes
-                '#3d7db0ff',    # Blue -> Greener (stayed blue)
-                "#E0EEEE",     # No trend - Blue
-                
-                "#C1FFC1",     # No trend - Green/brown
                 '#348555ff',     # Green -> Bluer (stayed green)
+                
+                # no slopes 
+                "#E0EEEE",     # No trend - Blue
+                "#C1FFC1",     # No trend - Green/brown
+                
+                # positive slopes 
+                '#3d7db0ff',    # Blue -> Greener (stayed blue)
                 "#A2CD5A",     # lake became green -- add blue stripes
                 "green4")      # Intensifying Green/brown
 
@@ -93,19 +97,24 @@ write.csv(data_tally_ecoreg, 'Data/Ecoregion_TrendTally.csv')
 
 
 # 3. Format data for plotting ####
+data_tally_ecoreg <- read.csv('Data/Ecoregion_TrendTally.csv')
 # rewrite all trends to uncapitalize
 data_tally_ecoreg <- data_tally_ecoreg |>
-  mutate(trend_cat_switch = case_when(trend_cat_switch=='Intensifying Blue'~'Intensifying blue',
+  mutate(trend_cat_switch = case_when(# negative slopes 
+                                      trend_cat_switch=='Intensifying Blue'~'Intensifying blue',
                                       trend_cat_switch=='Shift to blue'~'Shift to blue',
-                                      trend_cat_switch=='Blue -> Greener'~'Blue -> greener',
+                                      trend_cat_switch=='Green -> Bluer'~'Green -> bluer',
+                                      
+                                      # no slopes 
                                       trend_cat_switch=='No trend - Blue'~'No trend - blue',
                                       trend_cat_switch=='No trend - Green/brown'~'No trend - green/brown',
-                                      trend_cat_switch=='Green -> Bluer'~'Green -> bluer',
+                                      # positive slopes 
+                                      trend_cat_switch=='Blue -> Greener'~'Blue -> greener',
                                       trend_cat_switch=='Shift to green'~'Shift to green',
                                       trend_cat_switch=='Intensifying Green/brown'~'Intensifying green/brown'))
 
 # factor for pretty colors
-data_tally_ecoreg$trend_cat_switch <- factor(data_tally_ecoreg$trend_cat_switch, levels=c("Intensifying blue",'Shift to blue', "Blue -> greener","No trend - blue", "No trend - green/brown", "Green -> bluer",'Shift to green', "Intensifying green/brown"))
+data_tally_ecoreg$trend_cat_switch <- factor(data_tally_ecoreg$trend_cat_switch, levels=c("Intensifying blue",'Shift to blue', "Green -> bluer","No trend - blue", "No trend - green/brown", "Blue -> greener",'Shift to green', "Intensifying green/brown"))
 
 
 # 4. Part a of Figure 2 ####
