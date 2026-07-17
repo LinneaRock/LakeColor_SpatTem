@@ -1,0 +1,853 @@
+---
+title: "Untitled"
+author: "Jordan Von Eggers"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# 1. Compile data
+
+## a. R script for compiling data
+Code provided by Bella - edited to pull files from Supercomputer
+
+00_compile_data_forBeartooth_allfiles.R (name of file)
+```{r}
+library(tidyverse)
+library(colorscience)
+
+## Read in new data from Michael!!! (these are the raw output files from the GEE script)
+csv_files <- fs::dir_ls("/pfs/tc1/project/lakecolor/data/limnosat_small", regexp = "\\.csv$") 
+
+# read in files
+new_limnosat <- csv_files %>%
+        purrr::map_dfr( ~ read_csv(.x) %>% 
+                                mutate(across(everything(), as.character))) %>% #bring in everything as a character because of issues with 'permanent' column
+        mutate(across(Aerosol:Swir2, as.numeric)) %>% #convert the dwl columns to numeric
+        drop_na() #drop na here to reduce memory load
+
+## split 'system:index' column using '_' as the separator
+new_limnosat[c('col1', 'col2','col3','col4','col5','col6')] <- str_split_fixed(new_limnosat$`system:index`, '_', 6)
+
+## Rename columns and format data
+new_limnosat_format <- new_limnosat %>%
+        unite('LandsatID57', col1:col5, sep = '_', remove = F) %>% 
+        unite('LandsatID8', col1:col4, sep = '_', remove = F) %>% 
+        mutate(LandsatID = if_else(!grepl('LC08', LandsatID57),
+                                   LandsatID57,
+                                   LandsatID8),
+               date = case_when(grepl('LT05', LandsatID) ~ col5,
+                                grepl('LE07', LandsatID) ~ col5,
+                                grepl('LC08', LandsatID) ~ col4,
+                                TRUE ~ ''),
+               date = as.Date(date, format = "%Y%m%d")) %>%#make date a date
+        mutate(mission = case_when(grepl('LT05', LandsatID) ~ 'LANDSAT_5',
+                                   grepl('LE07', LandsatID) ~ 'LANDSAT_7',
+                                   grepl('LC08', LandsatID) ~ 'LANDSAT_8',
+                                   TRUE ~ '')) %>% 
+        rename(lake_nhdid=permanent) %>% 
+        mutate(year=year(date)) %>% 
+        select(-c(col1:col6, LandsatID57, LandsatID8))
+
+unique(new_limnosat_format$mission)
+
+## QA filters and calculate/apply hand-off coefficients ----
+# this creates polynomial relationships between the 4 missions during times of overlapping data acquisition.
+# these relationships help standardize the data to account for slight differences in sensor wavelength resolution
+# and atmospheric correction. This is the method for calculating mission hand-offs used in Topp, et al., 2021.
+
+#filter for image quality, dswe1 count, and realistic Rrs values for water
+new_limno_filt <- new_limnosat_format %>% 
+        mutate(pCount_dswe1 = as.numeric(pCount_dswe1),
+               hillShadow = as.numeric(hillShadow),
+               cScore_clouds = as.numeric(cScore_clouds)) %>% 
+        filter(!is.na(Blue),
+               hillShadow == 1,
+               cScore_clouds == 0,
+               pCount_dswe1 >= 6) %>% 
+        filter_at(vars(Red, Green, Blue, Nir, Swir1, Swir2),
+                  all_vars(.<2000 & .>-0))
+
+## Create polynomial functions based on the 1-99th percentile of each sensor
+## for overlapping periods
+# for landsat 7 and 5 coincident
+lm75 <- function(band){
+        print(paste0(band, ' model summary'))
+        y <- new_limno_filt %>% 
+                filter(date > as.Date('1999-04-15'), date < as.Date('2013-06-05'), mission == 'LANDSAT_7') 
+        print(paste0('LS7 scenes: ', length(unique(y$LandsatID)), ' values: ', nrow(y)))
+        y <- y %>% 
+                .[,band] %>% 
+                quantile(., seq(.01,.99, .01), na.rm = TRUE) #due to tbl_df format, you have to tell it to ignore NA, even though there are none.
+        
+        x = new_limno_filt %>% 
+                filter(date > as.Date('1999-04-15'), date < as.Date('2013-06-05'), mission == 'LANDSAT_5') 
+        print(paste0('LS5 scenes: ', length(unique(x$LandsatID)), ' values: ', nrow(x)))
+        x = x %>% 
+                .[,band] %>% 
+                quantile(., seq(.01,.99, .01), na.rm = TRUE)
+        
+        lm <- lm(y~poly(x, 2, raw = T))
+        print(summary(lm))
+        plot(y~x, 
+             main = paste0(band, ' LS5-7 handoff'), 
+             ylab = '0.01 Quantile Values for LS7 Rrs', 
+             xlab = '0.01 Quantile Values for LS5 Rrs')
+        lines(sort(x),
+              fitted(lm)[order(x)],
+              col = "red",
+              type = "l")
+        
+        df <- tibble(band = band, intercept = lm$coefficients[[1]], B1 = lm$coefficients[[2]], B2 = lm$coefficients[[3]])
+        return(df)
+}
+
+# for landsat 7 and 8 coincident
+lm78 <- function(band){
+        print(paste0(band, ' model summary'))
+        y <- new_limno_filt %>% 
+                filter(date > as.Date('2013-02-11'), date < as.Date('2022-04-16'), mission == 'LANDSAT_7') 
+        print(paste0('LS7 scenes: ', length(unique(y$LandsatID)), ' values: ', nrow(y)))
+        y <- y %>% 
+                .[,band] %>% 
+                quantile(., seq(.01,.99, .01), na.rm = TRUE)
+        
+        x = new_limno_filt %>% 
+                filter(date > as.Date('2013-02-11'), date < as.Date('2022-04-16'), mission == 'LANDSAT_8') 
+        print(paste0('LS8 scenes: ', length(unique(x$LandsatID)), ' values: ', nrow(x)))
+        x = x %>% 
+                .[,band] %>% 
+                quantile(., seq(.01,.99, .01), na.rm = TRUE)
+        
+        lm <- lm(y~poly(x, 2, raw = T))
+        print(summary(lm))
+        plot(y~x, main = paste0(band, ' LS7-8 handoff'), 
+             ylab = '0.01 Quantile Values for LS7 Rrs', 
+             xlab = '0.01 Quantile Values for LS8 Rrs')
+        lines(sort(x),
+              fitted(lm)[order(x)],
+              col = "red",
+              type = "l")
+        
+        df <- tibble(band = band, intercept = lm$coefficients[[1]], B1 = lm$coefficients[[2]], B2 = lm$coefficients[[3]])
+        return(df)
+}
+
+## Run the functions and look at the resulting corrections
+bands <-  c('Blue', 'Green', 'Red', 'Nir', 'Swir1','Swir2')
+
+### Landsat 5 to 7
+funcs.5 <- bands %>% map_dfr(lm75) %>% mutate(SatCorr = 'LANDSAT_5')
+
+### Landsat 8 to 7
+funcs.8 <- bands %>% map_dfr(lm78) %>% mutate(SatCorr = 'LANDSAT_8')
+
+### Join all coefficients
+handoffs = full_join(funcs.5, funcs.8) 
+
+#export handoffs
+write.csv(handoffs, paste0('handoff/_handoff_coefficients_limnosmall_v', Sys.Date(), '.csv'))
+
+## apply coefficients to band data
+#reorient coeffs
+handoff_h = handoffs %>% 
+        pivot_longer(names_to = 'coeff',
+                     values_to = 'value',
+                     cols = c('intercept', 'B1', 'B2')) %>% 
+        pivot_wider(names_from = c('band', 'coeff'),
+                    values_from = 'value') %>% 
+        rename(mission = SatCorr)
+
+#join with limnosat_filt
+new_limno_filt_adj <- full_join(new_limno_filt, handoff_h)
+
+#apply coeffs
+new_limno_filt_adj = new_limno_filt_adj %>% 
+        mutate(Blue_corr = Blue_intercept + Blue_B1*Blue + Blue_B2*Blue^2,
+               Red_corr = Red_intercept + Red_B1*Red + Red_B2*Red^2,
+               Green_corr = Green_intercept + Green_B1*Green + Green_B2*Green^2,
+               Nir_corr = Nir_intercept + Nir_B1*Nir + Nir_B2*Nir^2,
+               Swir1_corr = Swir1_intercept + Swir1_B1*Swir1 + Swir1_B2*Swir1^2,
+               Swir2_corr = Swir2_intercept + Swir2_B1*Swir2 + Swir2_B2*Swir2^2) %>% 
+        mutate(Blue_corr = ifelse(mission == 'LANDSAT_7', Blue, Blue_corr),
+               Red_corr = ifelse(mission == 'LANDSAT_7', Red, Red_corr),
+               Green_corr = ifelse(mission == 'LANDSAT_7', Green, Green_corr),
+               Nir_corr = ifelse(mission == 'LANDSAT_7', Nir, Nir_corr),
+               Swir1_corr = ifelse(mission == 'LANDSAT_7', Swir1, Swir1_corr),
+               Swir2_corr = ifelse(mission == 'LANDSAT_7', Swir2, Swir2_corr))
+
+
+#drop og band data and coeffs
+new_limno_filt_adj = new_limno_filt_adj %>% 
+        select(-c(Blue:Swir2, Blue_intercept:Swir1_B2)) %>%
+        relocate(mission, year, date, lake_nhdid)
+
+# remove three iterations before this
+rm(new_limnosat, new_limnosat_format, new_limno_filt)
+
+## calculate dWL and make lake summaries ----
+source("dWL_calc.R")
+
+## calculate dWL, etc
+new_limno_filt_adj <- new_limno_filt_adj %>% 
+        mutate(dWL=fui.hue(Red_corr, Green_corr, Blue_corr),
+               brightness=Red_corr+Green_corr+Blue_corr+Nir_corr,
+               normalized_green=Green_corr/brightness) %>%
+        group_by(date, lake_nhdid, year) %>%
+        dplyr::summarize(dWL=mean(dWL),
+                         brightness=mean(brightness),
+                         normalized_green=mean(normalized_green),
+                         Nir=mean(Nir_corr))
+
+new_limnosat = new_limno_filt_adj
+
+save(new_limnosat, file = "data_export/new_limnosat_20230927.RData")
+```
+
+## b. Pull from file calculating dominant wavelength
+
+dWL_calc.R
+```{bash}
+# FUI - Create Forel-Ule Color table --------------------------------------
+
+
+#Function for calculating DWL from red, green, and blue bands
+
+fui.hue <- function(R, G, B) {
+  
+  # Convert R,G, and B spectral reflectance to dominant wavelength based
+  # on CIE chromaticity color space
+  
+  # see Wang et al 2015. MODIS-Based Radiometric Color Extraction and
+  # Classification of Inland Water With the Forel-Ule
+  # Scale: A Case Study of Lake Taihu
+  
+  require(colorscience)
+  # chromaticity.diagram.color.fill()
+  Xi <- 2.7689*R + 1.7517*G + 1.1302*B
+  Yi <- 1.0000*R + 4.5907*G + 0.0601*B
+  Zi <- 0.0565*G + 5.5943*B
+  
+  # calculate coordinates on chromaticity diagram
+  x <-  Xi / (Xi + Yi +  Zi)
+  y <-  Yi / (Xi + Yi +  Zi)
+  z <-  Zi / (Xi + Yi +  Zi)
+  
+  # calculate hue angle
+  alpha <- atan2((x - 0.33), (y - 0.33)) * 180/pi
+  
+  # make look up table for hue angle to wavelength conversion
+  cie <- cccie31 %>%
+    mutate(a = atan2( (x - 0.33), (y - 0.33)) * 180/pi) %>%
+    dplyr::filter(wlnm <= 700) %>%
+    dplyr::filter(wlnm >=380)
+  
+  # find nearest dominant wavelength to hue angle
+  wl <- cie[as.vector(sapply(alpha,function(x) which.min(abs(x - cie$a)))), 'wlnm']
+  
+  #out <- cbind(as.data.frame(alpha), as.data.frame(wl))
+  
+  return(wl)
+}
+
+#Connect dWL to the forel ule index for visualization
+#The Forel-Ule Index (FUI) is a useful comprehensive indicator to show the water colour variability and water quality change in both inland waters and oceans.
+fui.lookup <- tibble(dWL = c(471:583), fui = NA)
+fui.lookup$fui[fui.lookup$dWL <= 583] = 21
+fui.lookup$fui[fui.lookup$dWL <= 581] = 20
+fui.lookup$fui[fui.lookup$dWL <= 579] = 19
+fui.lookup$fui[fui.lookup$dWL <= 577] = 18
+fui.lookup$fui[fui.lookup$dWL <= 575] = 17
+fui.lookup$fui[fui.lookup$dWL <= 573] = 16
+fui.lookup$fui[fui.lookup$dWL <= 571] = 15
+fui.lookup$fui[fui.lookup$dWL <= 570] = 14
+fui.lookup$fui[fui.lookup$dWL <= 569] = 13
+fui.lookup$fui[fui.lookup$dWL <= 568] = 12
+fui.lookup$fui[fui.lookup$dWL <= 567] = 11
+fui.lookup$fui[fui.lookup$dWL <= 564] = 10
+fui.lookup$fui[fui.lookup$dWL <= 559] = 9
+fui.lookup$fui[fui.lookup$dWL <= 549] = 8
+fui.lookup$fui[fui.lookup$dWL <= 530] = 7
+fui.lookup$fui[fui.lookup$dWL <= 509] = 6
+fui.lookup$fui[fui.lookup$dWL <= 495] = 5
+fui.lookup$fui[fui.lookup$dWL <= 489] = 4
+fui.lookup$fui[fui.lookup$dWL <= 485] = 3
+fui.lookup$fui[fui.lookup$dWL <= 480] = 2
+fui.lookup$fui[fui.lookup$dWL <= 475 & fui.lookup$dWL >470] = 1
+
+
+# Actual Forel-Ule Colors
+fui.colors <- tibble(color = c(
+  "#2158bc", "#316dc5", "#327cbb", "#4b80a0", "#568f96", "#6d9298", "#698c86", 
+  "#759e72", "#7ba654", "#7dae38", "#94b660","#94b660", "#a5bc76", "#aab86d", 
+  "#adb55f", "#a8a965", "#ae9f5c", "#b3a053", "#af8a44", "#a46905", "#9f4d04"),
+  fui = 1:21)
+
+```
+
+
+## c. Bash job for compiling data
+
+run_00_compile_data.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name compile_data_lakecolor
+#SBATCH --mem=730GB
+#SBATCH --time=10:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=microbiome
+#SBATCH --output=compile_data_lakecolor_%A.out
+#SBATCH --partition=teton-cascade
+
+cd /project/lakecolor/data/
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.2.2
+
+srun Rscript 00_compile_data_forBeartooth_allfiles.R
+date
+```
+outfile: "compile_data_lakecolor_7936738.out"
+Job ID: 7936738
+Cluster: beartooth
+User/Group: jvonegge/jvonegge
+State: COMPLETED (exit code 0)
+Cores: 1
+CPU Utilized: 02:12:53
+CPU Efficiency: 99.45% of 02:13:37 core-walltime
+Job Wall-clock time: 02:13:37
+Memory Utilized: 122.54 GB
+Memory Efficiency: 16.79% of 730.00 GB
+
+move the new_limnosat_20230927.RData in the /project/lakecolor/data/archive/compile_data/data_export to the main archive folder and rename
+
+
+# 2. subset Limnosat lakes > 10 ha for Georgia and Texas
+
+## a. load packages
+```{r}
+library(tidyverse)
+library(sf)
+library(nhdplusTools)
+library(USAboundaries)
+```
+
+## b. subset hydrolakes by texas and georgia
+```{r, eval = F, warning = F}
+## Read in the geospatial data from Hydrolakes
+# Lakes
+lakes <- st_read('Data/HydroLakes/HydroLakes_DP.shp') %>%
+  st_centroid() %>%
+  filter(type == 'dp') # Grab only deepest point data
+ggplot() +
+  geom_sf(lakes, mapping=aes(), size=0.5)
+
+#Get Texas and Georgia outlines
+tx_ga <- us_states() %>%
+  filter(state_abbr %in% c('TX', 'GA')) %>%
+  st_transform(st_crs(lakes))
+
+ggplot() +
+  geom_sf(tx_ga, mapping=aes())
+
+
+tx_ga_lakes <- lakes[tx_ga,] 
+ggplot() +
+  geom_sf(tx_ga_lakes, mapping=aes(),size=0.5)
+
+ggplot() +
+  geom_sf(lakes, mapping=aes(), color='grey') +
+  geom_sf(tx_ga_lakes, mapping=aes(), color='red')
+
+length(unique(tx_ga_lakes$Hylak_id))
+# 2495 hydrolakes - not limnosat
+  
+
+```
+
+
+## c. Join to NHD features and limnosat large dataset
+
+```{r, eval = F}
+
+singular_fetch <- function(index = 1){
+  
+  wbd <- try(get_waterbodies(tx_ga_lakes[index,]), silent = T)
+  
+  if(length(class(wbd)) == 1){
+    wbd <- NULL
+  } else {
+    wbd <- wbd %>%
+      dplyr::select(comid:onoffnet,meandepth,maxdepth) %>%
+      mutate(onoffnet = as.character(onoffnet),
+             meandepth = as.numeric(meandepth),
+             maxdepth = as.numeric(maxdepth))
+  }
+  
+  return(wbd)
+}
+
+full_fetch <- map(1:nrow(tx_ga_lakes),singular_fetch)
+
+
+
+full_nhd <- do.call('rbind',full_fetch)
+
+
+definitely_lakes <- tx_ga_lakes[full_nhd,] 
+
+count_dL <- definitely_lakes |>
+  count(Hylak_id) # 1802 unique lakes, no duplicate Hylak_id
+
+library(mapview)
+mapview(full_nhd)
+
+nhd_hylak_duplicated <- st_join(definitely_lakes,
+                     full_nhd )
+#Remove lakes that join to multiple NHDs. Impossible to resolve which numbers to take
+#from lake cat
+# below are comids that we do not want because they are duplicated as SwampMarsh
+count_dups <- nhd_hylak_duplicated |>
+  distinct() |>
+  group_by(Hylak_id) |>
+  mutate(dups= n()) |>
+  ungroup() |>
+  filter(dups>1) |>
+  filter(ftype=='SwampMarsh')
+
+
+nhd_hylak_nodupes <- anti_join(as.data.frame(nhd_hylak_duplicated), as.data.frame(count_dups)) |>
+ distinct() |>
+  group_by(Hylak_id) |>
+  mutate(dups= n()) |>
+  ungroup()  |>
+  mutate(comid=as.character(comid))
+
+lake_link <- readRDS('Data/lake_link.RDS') |>
+  drop_na(nhdplusv2_comid) |>
+  distinct(lagoslakeid, nhdplusv2_comid, .keep_all = T) |>
+  mutate(comid=as.character(nhdplusv2_comid),
+         lake_nhdid=as.character(lake_nhdid))|>
+  select(-nhdplusv2_comid)
+head(lake_link)
+str(lake_link)
+
+
+nhd_link <- inner_join(lake_link, nhd_hylak_nodupes, by='comid') |>
+  distinct() |>
+  group_by(Hylak_id) |>
+  mutate(dups_hylak= n()) |>
+  ungroup()  |>
+  group_by(lake_nhdid) |>
+  mutate(dups_nhd= n()) |>
+  ungroup()
+
+nhd_link_nodupes <- nhd_link |>
+  filter(dups_hylak==1 &
+           dups_nhd==1) 
+
+length(unique(nhd_link_nodupes$lake_nhdid))
+length(unique(nhd_link_nodupes$lagoslakeid))
+length(unique(nhd_link_nodupes$Hylak_id))
+
+#LimnoSat color data
+ls_tx_ga <- read_csv("C:/Users/lrock1/Downloads/srCorrected_us_hydrolakes_dp_20200628.csv")  |>  
+  inner_join(as.data.frame(nhd_link_nodupes) %>%
+               as.data.frame(.) %>%
+               select(-geometry))|>
+  select(lagoslakeid, lake_nhdid, LandsatID, date, year, dWL)  |>
+  mutate(date=as.character(date))
+
+  
+
+rm(list=setdiff(ls(), c('ls_tx_ga')))
+write.csv(ls_tx_ga, 'ls_tx_ga.csv')
+```
+
+# 3. Join small limnosat and TX GA from large limnosat 
+
+```{r}
+require(tidyverse)
+getwd()
+#[1] "/pfs/tc1/project/lakecolor/data"
+
+# load in large TX GA limnosat
+ls_tx_ga<-read.csv("limnosat_large/ls_tx_ga.csv", row.names = 1) %>% select(-c(lagoslakeid, LandsatID))
+ls_tx_ga$date<-as.Date(ls_tx_ga$date)
+load("compile_data/data_export/new_limnosat_20230927.RData") # load in all small limnosat 
+objects()
+
+new_limnosat<-as.data.frame(new_limnosat)
+
+new_limnosat <- new_limnosat %>% select(lake_nhdid ,date ,year, dWL)
+
+# check headers match 
+head(ls_tx_ga)
+head(new_limnosat)
+nrow(ls_tx_ga)
+nrow(new_limnosat)
+# 661642 +  63609593 = 64271235
+
+
+# row bind together
+full_limnosat<-rbind(new_limnosat,ls_tx_ga)
+nrow(full_limnosat)
+
+class(full_limnosat$date)
+
+new_limnosat<-full_limnosat
+rm(list=setdiff(ls(), c('new_limnosat')))
+save.image("2024-07-30_full_limnosat.Rdata")
+```
+
+# 4. Filter and create limnosat dataframes 
+## a. Filter limnosat observations by season and LAGOS data
+Filter by May 1-Oct 31 observations and keep observations with LAGOS data
+
+```{bash}
+cd /project/lakecolor/data
+```
+
+```{r}
+require(tidyverse)
+
+load("2024-07-30_full_limnosat.Rdata")
+lake_data<-readRDS("2023-09-29_lagos_landcover_data.rds")
+
+
+#Filter Limnosat data by observations between May 1st October 31st
+new_limnosat$date_m_d <- format(new_limnosat$date, format = "%m-%d")
+head(new_limnosat$date_m_d)
+start_date <- format(as.Date("2023-05-01"), format = "%m-%d")
+end_date <- format(as.Date("2023-10-31"), format = "%m-%d")
+limnosat_may_oct <- new_limnosat[new_limnosat$date_m_d >= start_date & new_limnosat$date_m_d <= end_date, ]
+start_date; end_date
+
+nrow(limnosat_may_oct)
+#42516565
+nrow(new_limnosat)
+#64271235
+42516565/64271235
+#0.6615178 - 66 % of the observations retained after filtering for Limnosat observations May 1 - Oct 31
+
+# merge with Lagos data (should be static for each lake)
+# first take out the landcover data that was attached
+lagos<-lake_data[,1:15]
+lagos<-distinct(lagos)
+nrow(lagos)
+#479950
+
+table(unique(limnosat_may_oct$lake_nhdid)%in%unique(lagos$lake_nhdid))
+ # FALSE   TRUE 
+ # 42775 146301 
+#  0.2923767 don't have lagos data
+ 
+#unique number of lakes to start with
+length(unique(new_limnosat$lake_nhdid))
+#193667
+
+#after filtering for may-oct season
+length(unique(limnosat_may_oct$lake_nhdid))
+#189076
+
+
+#merge may-oct limnosat dataset with the filtered lagos dataset
+limnosat_may_oct_lagos<-inner_join(limnosat_may_oct,lagos)
+#Joining with `by = join_by(lake_nhdid)`
+
+#after filtering for may-oct and observations with lagos data
+length(unique(limnosat_may_oct_lagos$lake_nhdid))
+#146301
+
+nrow(limnosat_may_oct_lagos)
+#36051931
+
+36051931/64271235 #56% of observations retained after filtering for May-Oct and only those with Lagos data
+
+#remove month/day column
+limnosat_may_oct_lagos$date_m_d<-NULL
+
+#remove all objects
+rm(list=setdiff(ls(), "limnosat_may_oct_lagos"))
+save.image(paste0(Sys.Date(),"_Limnosat_May_Oct_Lagos.RData"))
+```
+
+
+## b. Create temporal dataset
+
+Here we are filtering by lakes that have:
+1. 30 years worth of observations
+2. 3 observations minimum per year
+3. observations no more than 5 years apart
+
+
+Filter_Limnosat_May_Oct_Lagos_For_Temporal.R
+```{r}
+require(tidyverse)
+load("2024-07-30_Limnosat_May_Oct_Lagos.RData")
+
+#starting number of lakes
+length(unique(limnosat_may_oct_lagos$lake_nhdid))
+
+
+#############################################################################
+#### Filter the sites x years by only those with at least 3 observations ####
+#############################################################################
+observations_bySite_byYear <- limnosat_may_oct_lagos %>%
+        group_by(lake_nhdid, year) %>% 
+        summarize(Count = n()) 
+# unqiue sites and years
+nrow(observations_bySite_byYear)
+
+
+morethan3obsperyear<-observations_bySite_byYear[observations_bySite_byYear$Count>=3,]
+#number of unique sites and years retained
+nrow(morethan3obsperyear)
+
+#% of unique sites and years
+nrow(morethan3obsperyear)/nrow(observations_bySite_byYear)
+
+#subset the main dataframe by the years and sites that have at least 3 observations
+morethan3obsperyear$lake_year<-paste(morethan3obsperyear$lake_nhdid,morethan3obsperyear$year,sep="@")
+head(morethan3obsperyear)
+limnosat_may_oct_lagos$lake_year<-paste(limnosat_may_oct_lagos$lake_nhdid,limnosat_may_oct_lagos$year,sep="@")
+limnosat_may_oct_lagos$lake_year[1:6]
+
+#percent of observations lost
+table(limnosat_may_oct_lagos$lake_year%in%morethan3obsperyear$lake_year) 
+
+# starting number of observations
+nrow(limnosat_may_oct_lagos)
+
+limnosat_may_oct_lagos_3obs<-limnosat_may_oct_lagos[limnosat_may_oct_lagos$lake_year%in%morethan3obsperyear$lake_year,]
+# observations after removing ones with 3 observations
+nrow(limnosat_may_oct_lagos_3obs)
+
+
+
+###########################################################################
+#### Filter the sites by those with 30+ years of limnosat observations #### 
+###########################################################################
+unique_years_bySite <- limnosat_may_oct_lagos_3obs %>%
+        group_by(lake_nhdid) %>%  # Group by lake
+        summarize(Number_Years = n_distinct(year))  
+
+head(unique_years_bySite)
+Yrs30<-unique_years_bySite[unique_years_bySite$Number_Years>=30,]
+#number of lakes with 30_ years of data
+nrow(Yrs30)
+
+
+limnosat_may_oct_lagos_30yrs<-limnosat_may_oct_lagos_3obs[limnosat_may_oct_lagos_3obs$lake_nhdid%in%Yrs30$lake_nhdid,]
+# should match tne number of sites
+length(unique(limnosat_may_oct_lagos_30yrs$lake_nhdid))
+
+
+############################################################################
+#### Filter the lakes that have observations no more than 5 years apart #### 
+############################################################################
+limnosat_may_oct_lagos_30yrs <-limnosat_may_oct_lagos_30yrs %>% 
+        arrange(lake_nhdid, year)
+lake_year<-limnosat_may_oct_lagos_30yrs%>%
+        select(lake_nhdid, year,date) #this grabs date too even if you don't add it here
+lake_year$date<-NULL
+nrow(lake_year)
+
+#lake years after distinct
+lake_year<-distinct(lake_year)
+nrow(lake_year)
+
+#number of lakes
+length(unique(lake_year$lake_nhdid))
+
+
+
+lakes_rm<-NULL
+i=1
+j=1
+for(i in 1:length(unique(lake_year$lake_nhdid))){
+        sub<-lake_year[lake_year$lake_nhdid==unique(lake_year$lake_nhdid)[i],]
+        for(j in 1:(nrow(sub)-1)){
+                if(sub[j+1,]$year - sub[j,]$year > 5){
+                        lakes_rm<-c(lakes_rm, as.character(sub[1,1]))   
+                }
+        }
+        print(i)
+}
+save.image(paste0(Sys.Date(),"_TEMPORAL_Tempfile.RData"))
+
+limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr<-limnosat_may_oct_lagos_30yrs[limnosat_may_oct_lagos_30yrs$lake_nhdid%in%setdiff(limnosat_may_oct_lagos_30yrs$lake_nhdid,lakes_rm),]
+
+
+#how many lakes?
+length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))
+
+
+length(unique(limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr$lake_nhdid))/length(unique(limnosat_may_oct_lagos$lake_nhdid))
+
+
+#rename to something short and easy to work with
+limnosat<-limnosat_may_oct_lagos_30Yr_3ObsYr_No5Yr
+write.csv(lakes_rm,"lakes_removed_5YearsNoData.csv")
+rm(list=setdiff(ls(), "limnosat"))
+
+write_rds(limnosat,paste0(Sys.Date(),"_Limnosat_Lagos.rds"))
+```
+Total number of lakes = 81,875
+
+run_Filter_Limnosat_May_Oct_Lagos_For_Temporal.sh
+```{bash}
+#!/bin/bash
+#SBATCH --job-name Filter_Limnosat
+#SBATCH --mem=60GB
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=1
+#SBATCH --account=microbiome
+#SBATCH --output=Filter_Limnosat_May_Oct_Lagos_For_Temporal_%A.out
+
+cd /project/lakecolor/data/
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+
+srun Rscript Filter_Limnosat_May_Oct_Lagos_For_Temporal.R
+date
+
+```
+
+
+
+# 5. Add in climate data from PRISM
+
+```{bash}
+#load r and gdal (need gdal for terra to work)
+module load arcc/1.0  gcc/12.2.0 
+module load r/4.4.0
+module load gdal/3.6.1
+R
+```
+
+ 
+```{r}
+# Load required packages and trim initial spatial dataset for comparison.
+
+#Set required packages
+require(tidyverse)
+require(codetools)
+require(terra)
+require(prism)
+
+#load in temporal data to get coordinates for each lake
+limno<-readRDS("/project/lakecolor/data/2024-07-30_Limnosat_Lagos.rds")
+
+#subset temporal to just variables of interest 
+lake.coords.id <- select(limno, lake_nhdid, lake_lat_decdeg, lake_lon_decdeg)
+#select kept adding a date column so I had to brute force remove it
+#lake.coords.id <- lake.coords.id[-1]
+#trim spatial for only one instance of each lake
+lake.coords.id <- lake.coords.id %>% distinct()
+
+
+# Create geometry objects from the lake coordinates
+
+#Create a dataframe that's just the coordinates 
+xy <- lake.coords.id[2:3]
+#rename to lat to y and long to x
+colnames(xy)[1:2] = c("y","x")
+#rearrange colums so x comes first
+xy <- xy[2:1]
+#turn lake.coord.id into a SpatVect
+lakepoints <- vect(xy, geom=c("x", "y"), crs = "epsg:4326")
+
+
+# Set the prism directory (commented out is how you download PRISM data, which is a one time thing)
+#set prism archive and download prism data
+prism_set_dl_dir("/project/lakecolor/data/prism_input")
+# get_prism_annual("ppt", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmean", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmax", 1984:2022, keepZip = FALSE)
+# get_prism_annual("tmin", 1984:2022, keepZip = FALSE)
+
+
+# Download mean, max, min, and ppt from the prism archive 
+
+#Access prism archive (downloaded into the lake color project) for tmean/tmax/tmin/ppt annual values
+tmean <- prism_archive_subset(type = "tmean", temp_period = "annual",)
+tmax <- prism_archive_subset(type = "tmax", temp_period = "annual",)
+tmin <- prism_archive_subset(type = "tmin", temp_period = "annual",)
+ppt <- prism_archive_subset(type = "ppt", temp_period = "annual",)
+
+# Create a raster out of the prism data 
+
+#rasterize the data (base resolution for this function is 4km)
+tmean <- rast(pd_to_file(tmean))
+tmax <- rast(pd_to_file(tmax))
+tmin <- rast(pd_to_file(tmin))
+ppt <- rast(pd_to_file(ppt))
+
+
+# Extract values from each lake point and make it into a data frame
+
+#extract values from the data raster for each year using the location of each lake in the set (using the spatvector previously made)
+tmean_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmean, lakepoints))
+tmax_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmax, lakepoints))
+tmin_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(tmin, lakepoints))
+ppt_from_prism <- data.frame(xy, 
+                   lake.coords.id$lake_nhdid, 
+                   extract(ppt, lakepoints))
+
+
+# Format data 
+
+#convert wide form to long form 
+tmean_from_prism <- pivot_longer(data = tmean_from_prism, cols = starts_with("PRISM"))
+tmax_from_prism <- pivot_longer(data = tmax_from_prism, cols = starts_with("PRISM"))
+tmin_from_prism <- pivot_longer(data = tmin_from_prism, cols = starts_with("PRISM"))
+ppt_from_prism <- pivot_longer(data = ppt_from_prism, cols = starts_with("PRISM"))
+#convert string of prism data year to numeric value of year 
+tmean_from_prism$name <- str_extract(tmean_from_prism$name, "\\d{4}")
+tmax_from_prism$name <- str_extract(tmax_from_prism$name, "\\d{4}")
+tmin_from_prism$name <- str_extract(tmin_from_prism$name, "\\d{4}")
+ppt_from_prism$name <- str_extract(ppt_from_prism$name, "\\d{4}")
+#rename "name" to "year" 
+colnames(tmean_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmean")
+colnames(tmax_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmax")
+colnames(tmin_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "tmin")
+colnames(ppt_from_prism)[1:6] = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year", "ppt")
+
+
+# Join data into one data frame 
+
+prism_lake_data <- tmean_from_prism %>% 
+  left_join(tmax_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year")) %>% 
+  left_join(tmin_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year")) %>% 
+  left_join(ppt_from_prism, by = c("lake_lon_decdeg","lake_lat_decdeg","lake_nhdid","ID","year"))
+
+#Remove ID column
+prism_lake_data$ID <- NULL
+
+#Save the final product to the working directory 
+
+saveRDS(prism_lake_data, file = "prism_lakepoint_data.rds")
+```
+
+
+
+# 6. Move and protect files
+```{bash}
+mkdir 01_Compile_Filter_Data
+chmod u+w compile_data limnosat_small
+mv * 01_Compile_Filter_Data/
+chmod a-w *
+```
+
+# 7. Final files
+The two final files from the 01_Compile_Filter_Data.Rmd and in the 01_Compile_Filter_Data folder are: 
+1. 2024-07-30_Limnosat_Lagos.rds - compiled and filtered data for temporal time series, with 81,875 total lakes
+2. prism_lakepoint_data.rds - PRISM data for the previous file
