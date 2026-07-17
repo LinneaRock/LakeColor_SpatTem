@@ -31,3 +31,4 @@ vignettes/*.pdf
 */Data/limnoSat_westernUSA.csv
 .RDataTmp
 .DS_Store
+LakeSR/1_DataPrep/1_DataDownloads/1_LAGOS/*.RDS
